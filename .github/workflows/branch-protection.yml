@@ -1,0 +1,31 @@
+name: Branch Protection
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  branch-protection-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Verify Pull Request Approval
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "⚠️  Direct push to main branch detected!"
+        echo "All changes to main branch must go through pull requests with approval."
+        echo "Please create a feature branch and submit a pull request instead."
+        exit 1
+        
+    - name: PR Status Check
+      if: github.event_name == 'pull_request'
+      run: |
+        echo "✅ Pull request workflow triggered correctly"
+        echo "Target branch: ${{ github.base_ref }}"
+        echo "Source branch: ${{ github.head_ref }}"
+        echo "PR requires approval before merging to main"

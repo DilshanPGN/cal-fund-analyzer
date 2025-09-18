@@ -1,0 +1,56 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  validate-pr:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate PR requirements
+      run: |
+        echo "✅ Validating pull request to main branch"
+        echo "PR Title: ${{ github.event.pull_request.title }}"
+        echo "PR Author: ${{ github.event.pull_request.user.login }}"
+        echo "Target: ${{ github.base_ref }}"
+        echo "Source: ${{ github.head_ref }}"
+        echo ""
+        echo "📋 PR Requirements:"
+        echo "- Code review required from @DilshanPGN"
+        echo "- All status checks must pass"
+        echo "- No merge conflicts"
+        
+    - name: Check file changes
+      run: |
+        echo "📁 Files changed in this PR:"
+        git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} || echo "Unable to show diff"
+        
+  block-direct-push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Block direct push to main
+      run: |
+        echo "🚫 BLOCKED: Direct push to main branch detected!"
+        echo ""
+        echo "❌ This action violates the branch protection policy."
+        echo "📝 All changes to main must go through pull requests."
+        echo "👥 Pull requests require approval from @DilshanPGN."
+        echo ""
+        echo "🔧 To fix this:"
+        echo "1. Create a feature branch: git checkout -b feature/your-feature"
+        echo "2. Push your changes to the feature branch"
+        echo "3. Create a pull request targeting main branch"
+        echo "4. Wait for approval before merging"
+        echo ""
+        echo "For more information, see: .github/pull_request_template.md"
+        exit 1

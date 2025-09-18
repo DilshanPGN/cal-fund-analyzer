@@ -1,0 +1,8 @@
+# Global code owners - require approval for all changes
+* @DilshanPGN
+
+# Specific protection for critical files
+/.github/ @DilshanPGN
+/README.md @DilshanPGN
+/LICENSE @DilshanPGN
+/.gitignore @DilshanPGN
