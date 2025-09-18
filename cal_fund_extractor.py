@@ -4,12 +4,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import time
+import os
 from typing import List, Dict, Optional
 
 class CALFundExtractor:
     def __init__(self):
         self.base_url = "https://cal.lk/wp-admin/admin-ajax.php"
         self.target_fund_name = "Capital Alliance Quantitative Equity Fund"
+        self.csv_filename = 'cal_fund_data.csv'
         
     def generate_date_range(self) -> List[str]:
         """Generate list of dates for 1st and 15th of each month from June 2024 to September 2025"""
@@ -34,6 +36,26 @@ class CALFundExtractor:
                 current_date = current_date.replace(month=current_date.month + 1)
         
         return dates
+    
+    def load_existing_data(self) -> Dict[str, float]:
+        """Load existing data from CSV file if it exists"""
+        if not os.path.exists(self.csv_filename):
+            print(f"No existing data file found: {self.csv_filename}")
+            return {}
+        
+        try:
+            df = pd.read_csv(self.csv_filename)
+            if 'Date' in df.columns and 'OLD_PRICE' in df.columns:
+                # Convert to dictionary with date as key and price as value
+                existing_data = dict(zip(df['Date'].astype(str), df['OLD_PRICE']))
+                print(f"Loaded {len(existing_data)} existing data points from {self.csv_filename}")
+                return existing_data
+            else:
+                print(f"Invalid CSV format in {self.csv_filename}")
+                return {}
+        except Exception as e:
+            print(f"Error loading existing data from {self.csv_filename}: {e}")
+            return {}
     
     def fetch_fund_data(self, date: str) -> Optional[Dict]:
         """Fetch fund data for a specific date"""
@@ -67,28 +89,35 @@ class CALFundExtractor:
         return None
     
     def collect_price_data(self) -> Dict[str, float]:
-        """Collect price data for all dates in the range"""
+        """Collect price data for all dates in the range, using cached data when available"""
+        # Load existing data first
+        price_data = self.load_existing_data()
+        
         dates = self.generate_date_range()
-        price_data = {}
+        missing_dates = [date for date in dates if date not in price_data]
         
-        print(f"Fetching data for {len(dates)} dates...")
-        
-        for i, date in enumerate(dates, 1):
-            print(f"Processing date {i}/{len(dates)}: {date}")
+        if missing_dates:
+            print(f"Found {len(price_data)} existing data points")
+            print(f"Fetching data for {len(missing_dates)} missing dates...")
             
-            fund_data = self.fetch_fund_data(date)
-            if fund_data:
-                price = self.extract_target_fund_price(fund_data, date)
-                if price is not None:
-                    price_data[date] = price
-                    print(f"  ✓ Price: {price}")
+            for i, date in enumerate(missing_dates, 1):
+                print(f"Processing missing date {i}/{len(missing_dates)}: {date}")
+                
+                fund_data = self.fetch_fund_data(date)
+                if fund_data:
+                    price = self.extract_target_fund_price(fund_data, date)
+                    if price is not None:
+                        price_data[date] = price
+                        print(f"  ✓ Price: {price}")
+                    else:
+                        print(f"  ✗ No price data found")
                 else:
-                    print(f"  ✗ No price data found")
-            else:
-                print(f"  ✗ Failed to fetch data")
-            
-            # Add small delay to be respectful to the API
-            time.sleep(0.5)
+                    print(f"  ✗ Failed to fetch data")
+                
+                # Add small delay to be respectful to the API
+                time.sleep(0.5)
+        else:
+            print(f"All {len(dates)} dates already have data - no API calls needed!")
         
         return price_data
     
@@ -140,9 +169,8 @@ class CALFundExtractor:
         df['Date'] = pd.to_datetime(df['Date'])
         df = df.sort_values('Date')
         
-        csv_filename = 'cal_fund_data.csv'
-        df.to_csv(csv_filename, index=False)
-        print(f"Data saved to '{csv_filename}'")
+        df.to_csv(self.csv_filename, index=False)
+        print(f"Data saved to '{self.csv_filename}'")
 
 def main():
     """Main function to run the fund data extraction and visualization"""

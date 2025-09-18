@@ -205,3 +205,5 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+cal_fund_data.csv
+cal_fund_price_trend.png
