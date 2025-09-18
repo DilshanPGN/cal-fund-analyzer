@@ -8,16 +8,22 @@ import os
 from typing import List, Dict, Optional
 
 class CALFundExtractor:
-    def __init__(self):
+    def __init__(self, fund_name: str = None, start_date: str = None, end_date: str = None):
         self.base_url = "https://cal.lk/wp-admin/admin-ajax.php"
-        self.target_fund_name = "Capital Alliance Quantitative Equity Fund"
-        self.csv_filename = 'cal_fund_data.csv'
+        self.target_fund_name = fund_name or "Capital Alliance Quantitative Equity Fund"
+        self.start_date = start_date or "2024-06-01"
+        self.end_date = end_date or "2025-09-01"
+        self.csv_filename = f'cal_fund_data_{self.target_fund_name.replace(" ", "_").replace("/", "_")}.csv'
         
     def generate_date_range(self) -> List[str]:
-        """Generate list of dates for 1st and 15th of each month from June 2024 to September 2025"""
+        """Generate list of dates for 1st and 15th of each month within the specified date range"""
         dates = []
-        start_date = datetime(2024, 6, 1)
-        end_date = datetime(2025, 9, 1)
+        try:
+            start_date = datetime.strptime(self.start_date, "%Y-%m-%d")
+            end_date = datetime.strptime(self.end_date, "%Y-%m-%d")
+        except ValueError as e:
+            print(f"Invalid date format. Please use YYYY-MM-DD format. Error: {e}")
+            return []
         
         current_date = start_date
         while current_date <= end_date:
@@ -36,6 +42,24 @@ class CALFundExtractor:
                 current_date = current_date.replace(month=current_date.month + 1)
         
         return dates
+    
+    def discover_available_funds(self, sample_date: str = "2024-06-01") -> List[str]:
+        """Discover all available funds from the API"""
+        print(f"Discovering available funds using sample date: {sample_date}")
+        
+        fund_data = self.fetch_fund_data(sample_date)
+        if not fund_data or 'UTMS_FUND' not in fund_data:
+            print("Failed to fetch fund data for discovery")
+            return []
+        
+        available_funds = []
+        for fund in fund_data['UTMS_FUND']:
+            fund_name = fund.get('FUND_NAME')
+            if fund_name:
+                available_funds.append(fund_name)
+        
+        print(f"Found {len(available_funds)} available funds")
+        return available_funds
     
     def load_existing_data(self) -> Dict[str, float]:
         """Load existing data from CSV file if it exists"""
@@ -135,7 +159,7 @@ class CALFundExtractor:
         # Create the plot
         plt.figure(figsize=(15, 8))
         plt.plot(df['Date'], df['Price'], marker='o', linewidth=2, markersize=6)
-        plt.title(f'{self.target_fund_name}\nPrice Trend (OLD_PRICE) - 1st & 15th of Each Month', 
+        plt.title(f'{self.target_fund_name}\nPrice Trend (OLD_PRICE) - {self.start_date} to {self.end_date}', 
                  fontsize=14, fontweight='bold')
         plt.xlabel('Date', fontsize=12)
         plt.ylabel('Price (LKR)', fontsize=12)
@@ -146,8 +170,9 @@ class CALFundExtractor:
         plt.tight_layout()
         
         # Save the graph
-        plt.savefig('cal_fund_price_trend.png', dpi=300, bbox_inches='tight')
-        print("Graph saved as 'cal_fund_price_trend.png'")
+        graph_filename = f'cal_fund_price_trend_{self.target_fund_name.replace(" ", "_").replace("/", "_")}.png'
+        plt.savefig(graph_filename, dpi=300, bbox_inches='tight')
+        print(f"Graph saved as '{graph_filename}'")
         
         # Show the graph
         plt.show()
@@ -172,14 +197,67 @@ class CALFundExtractor:
         df.to_csv(self.csv_filename, index=False)
         print(f"Data saved to '{self.csv_filename}'")
 
+def get_user_fund_selection(available_funds: List[str]) -> str:
+    """Get fund selection from user"""
+    print("\nAvailable Funds:")
+    print("-" * 50)
+    for i, fund in enumerate(available_funds, 1):
+        print(f"{i:2d}. {fund}")
+    
+    while True:
+        try:
+            choice = input(f"\nSelect a fund (1-{len(available_funds)}) or press Enter for default: ").strip()
+            if not choice:
+                return "Capital Alliance Quantitative Equity Fund"
+            
+            choice_num = int(choice)
+            if 1 <= choice_num <= len(available_funds):
+                return available_funds[choice_num - 1]
+            else:
+                print(f"Please enter a number between 1 and {len(available_funds)}")
+        except ValueError:
+            print("Please enter a valid number")
+
+def get_user_date_input(prompt: str, default: str) -> str:
+    """Get date input from user with validation"""
+    while True:
+        user_input = input(f"{prompt} (default: {default}): ").strip()
+        if not user_input:
+            return default
+        
+        try:
+            # Validate date format
+            datetime.strptime(user_input, "%Y-%m-%d")
+            return user_input
+        except ValueError:
+            print("Invalid date format. Please use YYYY-MM-DD format (e.g., 2024-06-01)")
+
 def main():
     """Main function to run the fund data extraction and visualization"""
-    extractor = CALFundExtractor()
-    
     print("CAL Fund Data Extractor")
     print("=" * 50)
+    
+    # Create a temporary extractor to discover available funds
+    temp_extractor = CALFundExtractor()
+    available_funds = temp_extractor.discover_available_funds()
+    
+    if not available_funds:
+        print("Failed to discover available funds. Using default fund.")
+        selected_fund = "Capital Alliance Quantitative Equity Fund"
+    else:
+        selected_fund = get_user_fund_selection(available_funds)
+    
+    # Get date range from user
+    start_date = get_user_date_input("Enter start date (YYYY-MM-DD)", "2024-06-01")
+    end_date = get_user_date_input("Enter end date (YYYY-MM-DD)", "2025-09-01")
+    
+    # Create the main extractor with user selections
+    extractor = CALFundExtractor(selected_fund, start_date, end_date)
+    
+    print("\n" + "=" * 50)
     print(f"Target Fund: {extractor.target_fund_name}")
-    print("Date Range: June 2024 - September 2025 (1st & 15th of each month)")
+    print(f"Date Range: {extractor.start_date} - {extractor.end_date} (1st & 15th of each month)")
+    print(f"Data will be saved to: {extractor.csv_filename}")
     print("=" * 50)
     
     # Collect price data
