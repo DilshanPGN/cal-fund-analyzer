@@ -119,30 +119,42 @@ class CALFundExtractor:
         
         dates = self.generate_date_range()
         missing_dates = [date for date in dates if date not in price_data]
+        existing_dates = [date for date in dates if date in price_data]
+        
+        # Show data coverage summary
+        print(f"\nData Coverage Summary:")
+        print(f"  Total dates in range: {len(dates)}")
+        print(f"  Existing data points: {len(existing_dates)}")
+        print(f"  Missing data points: {len(missing_dates)}")
+        
+        if existing_dates:
+            print(f"  Existing data range: {min(existing_dates)} to {max(existing_dates)}")
+            print(f"  ✓ Using cached data for {len(existing_dates)} dates")
         
         if missing_dates:
-            print(f"Found {len(price_data)} existing data points")
-            print(f"Fetching data for {len(missing_dates)} missing dates...")
+            print(f"  Missing data range: {min(missing_dates)} to {max(missing_dates)}")
+            print(f"  🔄 Fetching from API for {len(missing_dates)} dates...")
             
             for i, date in enumerate(missing_dates, 1):
-                print(f"Processing missing date {i}/{len(missing_dates)}: {date}")
+                print(f"  Processing missing date {i}/{len(missing_dates)}: {date}")
                 
                 fund_data = self.fetch_fund_data(date)
                 if fund_data:
                     price = self.extract_target_fund_price(fund_data, date)
                     if price is not None:
                         price_data[date] = price
-                        print(f"  ✓ Price: {price}")
+                        print(f"    ✓ Price: {price}")
                     else:
-                        print(f"  ✗ No price data found")
+                        print(f"    ✗ No price data found")
                 else:
-                    print(f"  ✗ Failed to fetch data")
+                    print(f"    ✗ Failed to fetch data")
                 
                 # Add small delay to be respectful to the API
                 time.sleep(0.5)
         else:
-            print(f"All {len(dates)} dates already have data - no API calls needed!")
+            print(f"  ✅ All {len(dates)} dates already have data - no API calls needed!")
         
+        print(f"\nFinal dataset: {len(price_data)} total data points")
         return price_data
     
     def create_graph(self, price_data: Dict[str, float]):
