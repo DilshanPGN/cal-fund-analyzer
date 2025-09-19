@@ -9,6 +9,7 @@ import sys
 from typing import List, Dict, Optional
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+import numpy as np
 
 class CALFundExtractor:
     def __init__(self, fund_name: str = None, start_date: str = None, end_date: str = None, api_delay: float = None):
@@ -236,7 +237,7 @@ class CALFundExtractor:
         return price_data
     
     def create_graph(self, price_data: Dict[str, float]):
-        """Create an interactive graph showing date vs OLD_PRICE with filtering options"""
+        """Create an interactive graph showing date vs OLD_PRICE with financial context analysis"""
         if not price_data:
             print("No data available to create graph")
             return
@@ -284,7 +285,7 @@ class CALFundExtractor:
         print(f"Graph saved as '{graph_filename}'")
         
         # Show the graph and keep it open
-        plt.show(block=True)
+        plt.show(block=False)
         
         # Print summary statistics
         print(f"\nSummary Statistics:")
@@ -304,6 +305,99 @@ class CALFundExtractor:
         print(f"    - ✋ Pan: Move around when zoomed")
         print(f"    - 🔍 Zoom: Click and drag to zoom into area")
         print(f"  • Close the graph window to continue")
+        
+        # Add financial context analysis feature
+        self._add_financial_context_analysis(df, price_data)
+        
+        # Keep the graph open
+        plt.show(block=True)
+    
+    def _add_financial_context_analysis(self, df: pd.DataFrame, price_data: Dict[str, float]):
+        """Add financial context analysis feature"""
+        print(f"\n🔍 Financial Context Analysis Feature")
+        print("=" * 50)
+        print("You can now analyze specific date ranges for financial context!")
+        print("This feature will help you understand what happened in Sri Lanka's")
+        print("financial sector during any selected period.")
+        
+        while True:
+            print(f"\nOptions:")
+            print("1. Analyze a specific date range")
+            print("2. Analyze recent performance (last 6 months)")
+            print("3. Analyze crisis period (2022)")
+            print("4. Analyze recovery period (2023)")
+            print("5. Skip analysis")
+            
+            choice = input("\nSelect an option (1-5): ").strip()
+            
+            if choice == "1":
+                self._analyze_custom_date_range(price_data)
+            elif choice == "2":
+                self._analyze_recent_performance(price_data)
+            elif choice == "3":
+                self._analyze_crisis_period(price_data)
+            elif choice == "4":
+                self._analyze_recovery_period(price_data)
+            elif choice == "5":
+                print("Skipping financial context analysis.")
+                break
+            else:
+                print("Invalid choice. Please select 1-5.")
+            
+            continue_choice = input("\nWould you like to analyze another period? (y/n): ").strip().lower()
+            if continue_choice not in ['y', 'yes']:
+                break
+    
+    def _analyze_custom_date_range(self, price_data: Dict[str, float]):
+        """Analyze a custom date range"""
+        print(f"\n📅 Custom Date Range Analysis")
+        print("-" * 30)
+        
+        # Get date range from user
+        start_date = input("Enter start date (YYYY-MM-DD): ").strip()
+        end_date = input("Enter end date (YYYY-MM-DD): ").strip()
+        
+        try:
+            # Validate dates
+            datetime.strptime(start_date, "%Y-%m-%d")
+            datetime.strptime(end_date, "%Y-%m-%d")
+            
+            # Perform analysis
+            context = self.analyze_financial_context(start_date, end_date, price_data)
+            self.display_financial_context(context)
+            
+        except ValueError:
+            print("❌ Invalid date format. Please use YYYY-MM-DD format.")
+    
+    def _analyze_recent_performance(self, price_data: Dict[str, float]):
+        """Analyze recent performance (last 6 months)"""
+        print(f"\n📊 Recent Performance Analysis (Last 6 Months)")
+        print("-" * 40)
+        
+        end_date = datetime.now() - timedelta(days=1)
+        start_date = end_date - timedelta(days=180)  # 6 months
+        
+        start_date_str = start_date.strftime("%Y-%m-%d")
+        end_date_str = end_date.strftime("%Y-%m-%d")
+        
+        context = self.analyze_financial_context(start_date_str, end_date_str, price_data)
+        self.display_financial_context(context)
+    
+    def _analyze_crisis_period(self, price_data: Dict[str, float]):
+        """Analyze crisis period (2022)"""
+        print(f"\n🚨 Crisis Period Analysis (2022)")
+        print("-" * 30)
+        
+        context = self.analyze_financial_context("2022-01-01", "2022-12-31", price_data)
+        self.display_financial_context(context)
+    
+    def _analyze_recovery_period(self, price_data: Dict[str, float]):
+        """Analyze recovery period (2023)"""
+        print(f"\n📈 Recovery Period Analysis (2023)")
+        print("-" * 30)
+        
+        context = self.analyze_financial_context("2023-01-01", "2023-12-31", price_data)
+        self.display_financial_context(context)
     
     def _apply_date_filter(self, df: pd.DataFrame) -> pd.DataFrame:
         """Apply date filtering to reduce data points"""
@@ -489,6 +583,216 @@ class CALFundExtractor:
         print(f"  🔄 Existing files updated: {len(updated_files)}")
         
         return all_funds_data
+    
+    def analyze_financial_context(self, start_date: str, end_date: str, price_data: Dict[str, float]) -> Dict[str, any]:
+        """Analyze financial context for a given date range"""
+        print(f"\n🔍 Analyzing financial context for {start_date} to {end_date}")
+        print("=" * 60)
+        
+        # Convert dates for analysis
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        
+        # Filter price data for the selected range
+        filtered_data = {}
+        for date_str, price in price_data.items():
+            date_dt = datetime.strptime(date_str, "%Y-%m-%d")
+            if start_dt <= date_dt <= end_dt:
+                filtered_data[date_str] = price
+        
+        if not filtered_data:
+            return {"error": "No data available for the selected date range"}
+        
+        # Convert to DataFrame for analysis
+        df = pd.DataFrame(list(filtered_data.items()), columns=['Date', 'Price'])
+        df['Date'] = pd.to_datetime(df['Date'])
+        df = df.sort_values('Date')
+        
+        # Calculate performance metrics
+        start_price = df['Price'].iloc[0]
+        end_price = df['Price'].iloc[-1]
+        total_return = ((end_price - start_price) / start_price) * 100
+        
+        # Calculate volatility
+        returns = df['Price'].pct_change().dropna()
+        volatility = returns.std() * np.sqrt(252) * 100  # Annualized volatility
+        
+        # Find significant price movements
+        price_changes = df['Price'].diff()
+        significant_moves = price_changes[abs(price_changes) > price_changes.std() * 2]
+        
+        # Analyze trends
+        trend_analysis = self._analyze_trend(df)
+        
+        # Get contextual events
+        contextual_events = self._get_contextual_events(start_date, end_date)
+        
+        # Generate insights
+        insights = self._generate_insights(df, total_return, volatility, significant_moves, contextual_events)
+        
+        return {
+            "date_range": f"{start_date} to {end_date}",
+            "total_return": round(total_return, 2),
+            "volatility": round(volatility, 2),
+            "price_range": f"{df['Price'].min():.4f} - {df['Price'].max():.4f}",
+            "data_points": len(df),
+            "trend_analysis": trend_analysis,
+            "significant_moves": len(significant_moves),
+            "contextual_events": contextual_events,
+            "insights": insights
+        }
+    
+    def _analyze_trend(self, df: pd.DataFrame) -> Dict[str, any]:
+        """Analyze price trend in the selected period"""
+        prices = df['Price'].values
+        dates = np.arange(len(prices))
+        
+        # Linear regression to determine trend
+        coeffs = np.polyfit(dates, prices, 1)
+        slope = coeffs[0]
+        
+        # Calculate trend strength
+        trend_strength = abs(slope) / prices.mean() * 100
+        
+        if slope > 0:
+            trend_direction = "Uptrend"
+            trend_description = f"Strong upward trend with {trend_strength:.2f}% daily growth"
+        elif slope < 0:
+            trend_direction = "Downtrend"
+            trend_description = f"Declining trend with {abs(trend_strength):.2f}% daily decline"
+        else:
+            trend_direction = "Sideways"
+            trend_description = "Relatively stable with minimal trend"
+        
+        return {
+            "direction": trend_direction,
+            "strength": round(trend_strength, 2),
+            "description": trend_description
+        }
+    
+    def _get_contextual_events(self, start_date: str, end_date: str) -> List[Dict[str, str]]:
+        """Get contextual financial events for Sri Lanka during the date range"""
+        # This is a simplified version - in a real implementation, you'd integrate with news APIs
+        events = []
+        
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        
+        # Known significant events in Sri Lankan financial history
+        significant_events = [
+            {"date": "2022-03-01", "event": "Sri Lanka economic crisis begins", "impact": "High"},
+            {"date": "2022-04-01", "event": "Sri Lanka defaults on foreign debt", "impact": "High"},
+            {"date": "2022-07-01", "event": "IMF bailout negotiations begin", "impact": "Medium"},
+            {"date": "2023-03-01", "event": "IMF approves $3 billion bailout package", "impact": "High"},
+            {"date": "2023-09-01", "event": "Central Bank policy rate adjustments", "impact": "Medium"},
+            {"date": "2024-01-01", "event": "Economic recovery measures implemented", "impact": "Medium"},
+            {"date": "2024-06-01", "event": "Tourism sector recovery", "impact": "Low"},
+        ]
+        
+        for event in significant_events:
+            event_date = datetime.strptime(event["date"], "%Y-%m-%d")
+            if start_dt <= event_date <= end_dt:
+                events.append(event)
+        
+        # Add general market context based on the period
+        if start_dt.year == 2022:
+            events.append({
+                "date": "2022",
+                "event": "Global economic uncertainty and inflation pressures",
+                "impact": "High"
+            })
+        elif start_dt.year == 2023:
+            events.append({
+                "date": "2023",
+                "event": "Post-crisis recovery and IMF program implementation",
+                "impact": "High"
+            })
+        elif start_dt.year == 2024:
+            events.append({
+                "date": "2024",
+                "event": "Economic stabilization and growth initiatives",
+                "impact": "Medium"
+            })
+        
+        return events
+    
+    def _generate_insights(self, df: pd.DataFrame, total_return: float, volatility: float, 
+                          significant_moves: pd.Series, events: List[Dict[str, str]]) -> List[str]:
+        """Generate AI-powered insights about the fund performance"""
+        insights = []
+        
+        # Performance insights
+        if total_return > 10:
+            insights.append("📈 Strong positive performance during this period")
+        elif total_return > 5:
+            insights.append("📊 Moderate positive performance")
+        elif total_return > 0:
+            insights.append("📉 Slight positive performance")
+        elif total_return > -5:
+            insights.append("📉 Minor decline in performance")
+        elif total_return > -10:
+            insights.append("📉 Moderate decline in performance")
+        else:
+            insights.append("📉 Significant decline in performance")
+        
+        # Volatility insights
+        if volatility > 30:
+            insights.append("⚡ High volatility period - significant price swings")
+        elif volatility > 20:
+            insights.append("📊 Moderate volatility - some price fluctuations")
+        else:
+            insights.append("📈 Low volatility - relatively stable period")
+        
+        # Event correlation insights
+        if events:
+            high_impact_events = [e for e in events if e.get("impact") == "High"]
+            if high_impact_events:
+                insights.append(f"🎯 {len(high_impact_events)} high-impact economic events occurred during this period")
+                insights.append("💡 Performance likely influenced by major economic developments")
+        
+        # Trend insights
+        if len(significant_moves) > 0:
+            insights.append(f"📊 {len(significant_moves)} significant price movements detected")
+            insights.append("🔍 These movements may indicate market reactions to news or events")
+        
+        # Data quality insights
+        if len(df) < 5:
+            insights.append("⚠️ Limited data points - analysis may be less reliable")
+        elif len(df) > 20:
+            insights.append("✅ Sufficient data points for reliable analysis")
+        
+        return insights
+    
+    def display_financial_context(self, context: Dict[str, any]):
+        """Display the financial context analysis in a formatted way"""
+        if "error" in context:
+            print(f"❌ {context['error']}")
+            return
+        
+        print(f"\n📊 Financial Context Analysis")
+        print("=" * 50)
+        print(f"📅 Period: {context['date_range']}")
+        print(f"📈 Total Return: {context['total_return']}%")
+        print(f"📊 Volatility: {context['volatility']}%")
+        print(f"💰 Price Range: {context['price_range']}")
+        print(f"📋 Data Points: {context['data_points']}")
+        
+        print(f"\n📈 Trend Analysis:")
+        print(f"  Direction: {context['trend_analysis']['direction']}")
+        print(f"  Strength: {context['trend_analysis']['strength']}%")
+        print(f"  Description: {context['trend_analysis']['description']}")
+        
+        if context['contextual_events']:
+            print(f"\n🎯 Key Events During This Period:")
+            for event in context['contextual_events']:
+                impact_emoji = "🔴" if event.get("impact") == "High" else "🟡" if event.get("impact") == "Medium" else "🟢"
+                print(f"  {impact_emoji} {event['date']}: {event['event']}")
+        
+        print(f"\n💡 AI Insights:")
+        for insight in context['insights']:
+            print(f"  {insight}")
+        
+        print("\n" + "=" * 50)
 
 def get_user_fund_selection(available_funds: List[str], earliest_dates: Dict[str, str]) -> str:
     """Get fund selection from user with earliest dates displayed"""
