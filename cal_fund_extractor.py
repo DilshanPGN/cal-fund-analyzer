@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import time
 import os
+import sys
 from typing import List, Dict, Optional
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
@@ -320,6 +321,138 @@ class CALFundExtractor:
         
         df.to_csv(self.csv_filename, index=False)
         print(f"Data saved to '{self.csv_filename}'")
+    
+    def init_all_funds_data(self, sample_date: str = None) -> Dict[str, Dict[str, float]]:
+        """Initialize data collection for all available funds using smart caching and single API call per date"""
+        # Use current date - 10 if no sample date provided
+        if sample_date is None:
+            sample_date = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
+        
+        print(f"Initializing data collection for all funds using sample date: {sample_date}")
+        
+        # First, discover all available funds
+        fund_data = self.fetch_fund_data(sample_date)
+        if not fund_data or 'UTMS_FUND' not in fund_data:
+            print("Failed to fetch fund data for initialization")
+            return {}
+        
+        # Get all fund names
+        available_funds = []
+        for fund in fund_data['UTMS_FUND']:
+            fund_name = fund.get('FUND_NAME')
+            if fund_name:
+                available_funds.append(fund_name)
+        
+        print(f"Found {len(available_funds)} available funds:")
+        for i, fund in enumerate(available_funds, 1):
+            print(f"  {i:2d}. {fund}")
+        
+        # Initialize data structure for all funds and load existing data
+        all_funds_data = {}
+        existing_data_summary = {}
+        
+        for fund_name in available_funds:
+            # Create a temporary extractor for this fund to load existing data
+            temp_extractor = CALFundExtractor(fund_name, self.start_date, self.end_date, self.api_delay)
+            existing_data = temp_extractor.load_existing_data()
+            all_funds_data[fund_name] = existing_data.copy()
+            existing_data_summary[fund_name] = len(existing_data)
+        
+        # Generate date range
+        dates = self.generate_date_range()
+        
+        # Calculate missing dates for each fund
+        missing_dates_by_fund = {}
+        total_missing_dates = set()
+        
+        for fund_name in available_funds:
+            missing_dates = [date for date in dates if date not in all_funds_data[fund_name]]
+            missing_dates_by_fund[fund_name] = missing_dates
+            total_missing_dates.update(missing_dates)
+        
+        # Show data coverage summary
+        print(f"\nData Coverage Summary:")
+        print(f"  Total dates in range: {len(dates)}")
+        print(f"  Unique dates needing API calls: {len(total_missing_dates)}")
+        
+        total_existing = sum(existing_data_summary.values())
+        total_possible = len(dates) * len(available_funds)
+        print(f"  Existing data points: {total_existing}/{total_possible}")
+        
+        if total_missing_dates:
+            print(f"  Missing data range: {min(total_missing_dates)} to {max(total_missing_dates)}")
+            print(f"  🔄 Fetching from API for {len(total_missing_dates)} dates...")
+            
+            successful_fetches = 0
+            failed_fetches = 0
+            
+            for i, date in enumerate(sorted(total_missing_dates), 1):
+                print(f"  Processing missing date {i}/{len(total_missing_dates)}: {date}")
+                
+                fund_data = self.fetch_fund_data(date)
+                if fund_data and 'UTMS_FUND' in fund_data:
+                    # Extract data for all funds from this date
+                    date_success_count = 0
+                    for fund in fund_data['UTMS_FUND']:
+                        fund_name = fund.get('FUND_NAME')
+                        if fund_name in all_funds_data:
+                            try:
+                                price = float(fund.get('OLD_PRICE', 0))
+                                if price > 0:  # Only store valid prices
+                                    all_funds_data[fund_name][date] = price
+                                    date_success_count += 1
+                            except (ValueError, TypeError):
+                                continue
+                    
+                    if date_success_count > 0:
+                        successful_fetches += 1
+                        print(f"    ✓ Collected data for {date_success_count}/{len(available_funds)} funds")
+                    else:
+                        failed_fetches += 1
+                        print(f"    ⚠ No valid data for any fund on this date")
+                else:
+                    failed_fetches += 1
+                    print(f"    ⚠ Failed to fetch data for this date")
+                
+                # Add configurable delay to be respectful to the API
+                time.sleep(self.api_delay)
+            
+            print(f"\nFetch Summary:")
+            print(f"  ✓ Successfully fetched: {successful_fetches} dates")
+            print(f"  ⚠ Failed to fetch: {failed_fetches} dates")
+        else:
+            print(f"  ✅ All {len(dates)} dates already have data for all funds - no API calls needed!")
+        
+        # Save data for each fund (only if there's new data)
+        saved_files = []
+        updated_files = []
+        
+        for fund_name, price_data in all_funds_data.items():
+            if price_data:  # Only save if we have data
+                # Create filename for this fund
+                csv_filename = f'cal_fund_data_{fund_name.replace(" ", "_").replace("/", "_")}.csv'
+                
+                # Check if file already exists
+                file_exists = os.path.exists(csv_filename)
+                
+                # Save to CSV
+                df = pd.DataFrame(list(price_data.items()), columns=['Date', 'OLD_PRICE'])
+                df['Date'] = pd.to_datetime(df['Date'])
+                df = df.sort_values('Date')
+                df.to_csv(csv_filename, index=False)
+                
+                if file_exists:
+                    updated_files.append(csv_filename)
+                    print(f"  🔄 Updated {len(price_data)} data points for '{fund_name}' in '{csv_filename}'")
+                else:
+                    saved_files.append(csv_filename)
+                    print(f"  ✓ Saved {len(price_data)} data points for '{fund_name}' to '{csv_filename}'")
+        
+        print(f"\nFile Summary:")
+        print(f"  📁 New files created: {len(saved_files)}")
+        print(f"  🔄 Existing files updated: {len(updated_files)}")
+        
+        return all_funds_data
 
 def get_user_fund_selection(available_funds: List[str]) -> str:
     """Get fund selection from user"""
@@ -385,6 +518,47 @@ def get_user_api_delay_input(prompt: str, default: float) -> float:
 def main():
     """Main function to run the fund data extraction and visualization"""
     print("CAL Fund Data Extractor")
+    print("=" * 50)
+    
+    # Check for init command
+    if len(sys.argv) > 1 and sys.argv[1].lower() == "init":
+        print("Running INIT command - collecting data for all available funds")
+        print("=" * 50)
+        
+        # Get date range from user (with new defaults)
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        start_date = get_user_date_input("Enter start date (YYYY-MM-DD)", "2013-01-01")
+        end_date = get_user_date_input("Enter end date (YYYY-MM-DD)", yesterday)
+        
+        # Get API delay from user
+        api_delay = get_user_api_delay_input("Enter API delay between requests", 0.5)
+        
+        # Create extractor for init command
+        extractor = CALFundExtractor(None, start_date, end_date, api_delay)
+        
+        print("\n" + "=" * 50)
+        print(f"INIT Mode: Collecting data for ALL available funds")
+        print(f"Date Range: {extractor.start_date} - {extractor.end_date} (1st & 15th of each month)")
+        print(f"API Delay: {extractor.api_delay} seconds between requests")
+        print("=" * 50)
+        
+        # Run init command
+        all_funds_data = extractor.init_all_funds_data()
+        
+        if all_funds_data:
+            total_funds = len([fund for fund, data in all_funds_data.items() if data])
+            print(f"\n✅ INIT completed successfully!")
+            print(f"📊 Collected data for {total_funds} funds")
+            print(f"📁 Created CSV files for each fund")
+            print(f"\nYou can now run the normal mode to analyze specific funds:")
+            print(f"  python cal_fund_extractor.py")
+        else:
+            print("❌ INIT failed - no data was collected")
+        
+        return
+    
+    # Normal mode - single fund analysis
+    print("Running in NORMAL mode - analyzing a specific fund")
     print("=" * 50)
     
     # Create a temporary extractor to discover available funds

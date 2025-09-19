@@ -4,6 +4,8 @@ A comprehensive Python tool for extracting and analyzing unit trust fund data fr
 
 ## 🚀 Features
 
+- **Two Operation Modes**: Normal mode for single fund analysis and Init mode for bulk data collection
+- **Bulk Data Collection**: Init command efficiently collects data for ALL available funds in one operation
 - **Interactive Fund Selection**: Automatically discovers and allows selection from all available CAL funds
 - **Smart Data Caching**: Loads existing data to avoid redundant API calls and speeds up analysis
 - **Extended Historical Data**: Default date range from 2013-01-01 to current date - 1
@@ -39,13 +41,21 @@ For detailed installation instructions, including Python setup, see [install_ins
 
 ## 🎯 Usage
 
-### Interactive Usage
+### Two Operation Modes
+
+#### 1. Normal Mode - Single Fund Analysis
 Run the script with a simple command:
 ```bash
 python cal_fund_extractor.py
 ```
 
-### Interactive Workflow
+#### 2. Init Mode - Bulk Data Collection
+Collect data for ALL available funds efficiently:
+```bash
+python cal_fund_extractor.py init
+```
+
+### Normal Mode Workflow
 The script will guide you through the following steps:
 
 1. **Fund Discovery**: Automatically discovers all available CAL funds from the API
@@ -57,21 +67,43 @@ The script will guide you through the following steps:
 7. **Visualization**: Creates and displays a professional graph with fund-specific naming
 8. **Summary Statistics**: Provides detailed statistics about the collected data
 
-### Example Interactive Session
+### Init Mode Workflow
+The init command efficiently collects data for all funds:
+
+1. **Fund Discovery**: Automatically discovers all available CAL funds from the API
+2. **Date Range Configuration**: Allows you to specify custom start and end dates (defaults provided)
+3. **Smart Data Collection**: Collects data for ALL funds using single API call per date
+4. **Progress Tracking**: Shows real-time progress across all funds
+5. **Bulk Data Storage**: Creates individual CSV files for each fund
+6. **Efficiency Summary**: Reports total files created and data points collected
+
+### Example Normal Mode Session
 ```
 CAL Fund Data Extractor
 ==================================================
+Running in NORMAL mode - analyzing a specific fund
+==================================================
 
 Discovering available funds using sample date: 2024-06-01
-Found 3 available funds
+Found 13 available funds
 
 Available Funds:
 --------------------------------------------------
  1. Capital Alliance Quantitative Equity Fund
  2. CAL Fixed Income Opportunites Fund
  3. Capital Alliance Investment Grade Fund
+ 4. Capital Alliance Balanced Fund
+ 5. CAL Money Market Fund
+ 6. Capital Alliance Gilt Fund
+ 7. Capital Alliance Income Fund
+ 8. Capital Alliance Gilt Trading Fund
+ 9. Capital Alliance Investment Grade Fund
+10. Capital Alliance High Yield Fund
+11. Capital Alliance Corporate Treasury Fund
+12. Capital Alliance Medium Risk Debt Fund
+13. CAL Five year Optimum Fund
 
-Select a fund (1-3) or press Enter for default: 1
+Select a fund (1-13) or press Enter for default: 1
 
 Enter start date (YYYY-MM-DD) (default: 2013-01-01): 
 Enter end date (YYYY-MM-DD) (default: 2024-12-19): 
@@ -92,8 +124,78 @@ Data Coverage Summary:
   🔄 Fetching from API for 17 dates...
 ```
 
+### Example Init Mode Session
+```
+CAL Fund Data Extractor
+==================================================
+Running INIT command - collecting data for all available funds
+==================================================
+
+Enter start date (YYYY-MM-DD) (default: 2013-01-01): 
+Enter end date (YYYY-MM-DD) (default: 2024-12-19): 
+
+==================================================
+INIT Mode: Collecting data for ALL available funds
+Date Range: 2013-01-01 - 2024-12-19 (1st & 15th of each month)
+API Delay: 0.5 seconds between requests
+==================================================
+
+Initializing data collection for all funds using sample date: 2024-12-09
+Found 13 available funds:
+   1. Capital Alliance Corporate Treasury Fund
+   2. Capital Alliance Medium Risk Debt Fund
+   3. CAL Fixed Income Opportunities Fund
+   4. CAL Money Market Fund
+   5. Capital Alliance Gilt Fund
+   6. Capital Alliance Income Fund
+   7. Capital Alliance Gilt Trading Fund
+   8. Capital Alliance Investment Grade Fund
+   9. Capital Alliance High Yield Fund
+  10. Capital Alliance Quantitative Equity Fund
+  11. Capital Alliance Balanced Fund
+  12. CAL Five year Optimum Fund
+  13. FYCF
+
+Data Coverage Summary:
+  Total dates in range: 32
+  Unique dates needing API calls: 0
+  Existing data points: 384/416
+  ✅ All 32 dates already have data for all funds - no API calls needed!
+
+File Summary:
+  📁 New files created: 0
+  🔄 Existing files updated: 13
+
+✅ INIT completed successfully!
+📊 Collected data for 13 funds
+📁 Created CSV files for each fund
+
+You can now run the normal mode to analyze specific funds:
+  python cal_fund_extractor.py
+```
+
+## 🎯 When to Use Each Mode
+
+### Use Init Mode When:
+- **First-time setup**: You want to collect data for all available funds
+- **Bulk data collection**: You need historical data for multiple funds
+- **Data refresh**: You want to update all fund data with latest information
+- **Research purposes**: You're analyzing multiple funds and need comprehensive datasets
+
+### Use Normal Mode When:
+- **Single fund analysis**: You want to focus on one specific fund
+- **Interactive visualization**: You want to create graphs and visualizations
+- **Detailed analysis**: You need to examine trends and patterns for a specific fund
+- **Regular monitoring**: You're tracking a particular fund over time
+
+### Recommended Workflow:
+1. **Start with Init**: Run `python cal_fund_extractor.py init` to collect all fund data
+2. **Analyze individually**: Use `python cal_fund_extractor.py` to analyze specific funds
+3. **Periodic updates**: Re-run init command to refresh data with new dates
+
 ## 📊 Output Files
 
+### Normal Mode Output
 The script generates fund-specific files based on your selection:
 
 | File Pattern | Description |
@@ -101,14 +203,36 @@ The script generates fund-specific files based on your selection:
 | `cal_fund_data_[Fund_Name].csv` | Raw fund price data in CSV format with Date and OLD_PRICE columns |
 | `cal_fund_price_trend_[Fund_Name].png` | High-resolution graph visualization showing price trends over time |
 
+### Init Mode Output
+The init command creates individual CSV files for ALL available funds:
+
+| File Pattern | Description |
+|--------------|-------------|
+| `cal_fund_data_[Fund_Name].csv` | Raw fund price data for each fund (one file per fund) |
+
 ### Example Output Files
 For "Capital Alliance Quantitative Equity Fund":
 - `cal_fund_data_Capital_Alliance_Quantitative_Equity_Fund.csv`
-- `cal_fund_price_trend_Capital_Alliance_Quantitative_Equity_Fund.png`
+- `cal_fund_price_trend_Capital_Alliance_Quantitative_Equity_Fund.png` (Normal mode only)
 
 For "CAL Fixed Income Opportunites Fund":
 - `cal_fund_data_CAL_Fixed_Income_Opportunites_Fund.csv`
-- `cal_fund_price_trend_CAL_Fixed_Income_Opportunites_Fund.png`
+- `cal_fund_price_trend_CAL_Fixed_Income_Opportunites_Fund.png` (Normal mode only)
+
+### Init Mode Creates Files For All Funds:
+- `cal_fund_data_Capital_Alliance_Corporate_Treasury_Fund.csv`
+- `cal_fund_data_Capital_Alliance_Medium_Risk_Debt_Fund.csv`
+- `cal_fund_data_CAL_Fixed_Income_Opportunities_Fund.csv`
+- `cal_fund_data_CAL_Money_Market_Fund.csv`
+- `cal_fund_data_Capital_Alliance_Gilt_Fund.csv`
+- `cal_fund_data_Capital_Alliance_Income_Fund.csv`
+- `cal_fund_data_Capital_Alliance_Gilt_Trading_Fund.csv`
+- `cal_fund_data_Capital_Alliance_Investment_Grade_Fund.csv`
+- `cal_fund_data_Capital_Alliance_High_Yield_Fund.csv`
+- `cal_fund_data_Capital_Alliance_Quantitative_Equity_Fund.csv`
+- `cal_fund_data_Capital_Alliance_Balanced_Fund.csv`
+- `cal_fund_data_CAL_Five_year_Optimum_Fund.csv`
+- `cal_fund_data_FYCF.csv`
 
 ## 🔍 Advanced Features
 
@@ -120,9 +244,19 @@ The script automatically discovers all available funds from the CAL API by makin
 - **Incremental Updates**: Only missing data points are fetched from the API
 - **Efficiency**: Dramatically reduces API calls and processing time for repeated runs
 - **Data Integrity**: Validates existing data before using cached values
+- **Init Mode Caching**: Init command uses smart caching - subsequent runs only fetch missing data
+- **Cross-Fund Efficiency**: Single API call per date collects data for all funds simultaneously
+
+### Init Command Features
+- **Bulk Data Collection**: Efficiently collects data for ALL available funds in one operation
+- **Single API Call Per Date**: One request per date fetches data for all funds simultaneously
+- **Smart Caching**: Subsequent runs only fetch missing data, dramatically reducing API usage
+- **Individual File Creation**: Creates separate CSV files for each fund for easy analysis
+- **Progress Tracking**: Shows real-time progress across all funds and dates
+- **Efficiency Reporting**: Reports total files created, updated, and data points collected
 
 ### Interactive Configuration
-- **Fund Selection**: Choose from a dynamically generated list of available funds
+- **Fund Selection**: Choose from a dynamically generated list of available funds (Normal mode)
 - **Custom Date Ranges**: Specify any start and end date within the API's data range
 - **Default Values**: Sensible defaults are provided for quick execution (2013-01-01 to current date - 1)
 - **Input Validation**: Comprehensive validation for all user inputs
