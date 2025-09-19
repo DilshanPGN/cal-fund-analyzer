@@ -6,14 +6,17 @@ A comprehensive Python tool for extracting and analyzing unit trust fund data fr
 
 - **Interactive Fund Selection**: Automatically discovers and allows selection from all available CAL funds
 - **Smart Data Caching**: Loads existing data to avoid redundant API calls and speeds up analysis
+- **Extended Historical Data**: Default date range from 2013-01-01 to current date - 1
 - **Flexible Date Ranges**: Customizable start and end dates with intelligent date generation
 - **Strategic Sampling**: Collects data on 1st and 15th of each month for comprehensive trend analysis
 - **Dynamic File Naming**: Automatically generates fund-specific CSV and graph filenames
-- **Interactive Visualizations**: Creates professional graphs showing price trends over time
+- **Interactive Visualizations**: Creates expandable, zoomable graphs with filtering options for large datasets
 - **Data Export**: Saves raw data in CSV format for further analysis and external tools
 - **Robust Error Handling**: Comprehensive error handling for network issues and data parsing
 - **API-Friendly**: Implements respectful delays between API calls to protect server resources
 - **Progress Tracking**: Real-time progress updates and data coverage summaries
+- **Smart Data Handling**: Automatically skips dates with no data instead of showing errors
+- **Large Dataset Management**: Automatic filtering suggestions for datasets with 100+ data points
 
 ## 📋 Prerequisites
 
@@ -69,12 +72,12 @@ Available Funds:
 
 Select a fund (1-3) or press Enter for default: 1
 
-Enter start date (YYYY-MM-DD) (default: 2024-06-01): 
-Enter end date (YYYY-MM-DD) (default: 2025-09-01): 
+Enter start date (YYYY-MM-DD) (default: 2013-01-01): 
+Enter end date (YYYY-MM-DD) (default: 2024-12-19): 
 
 ==================================================
 Target Fund: Capital Alliance Quantitative Equity Fund
-Date Range: 2024-06-01 - 2025-09-01 (1st & 15th of each month)
+Date Range: 2013-01-01 - 2024-12-19 (1st & 15th of each month)
 Data will be saved to: cal_fund_data_Capital_Alliance_Quantitative_Equity_Fund.csv
 ==================================================
 
@@ -120,8 +123,15 @@ The script automatically discovers all available funds from the CAL API by makin
 ### Interactive Configuration
 - **Fund Selection**: Choose from a dynamically generated list of available funds
 - **Custom Date Ranges**: Specify any start and end date within the API's data range
-- **Default Values**: Sensible defaults are provided for quick execution
+- **Default Values**: Sensible defaults are provided for quick execution (2013-01-01 to current date - 1)
 - **Input Validation**: Comprehensive validation for all user inputs
+
+### Interactive Graph Features
+- **Zoom and Pan**: Use mouse wheel to zoom in/out and drag to pan around the graph
+- **Large Dataset Handling**: Automatic filtering suggestions when datasets exceed 100 data points
+- **Date Range Filtering**: Interactive filtering to focus on specific time periods
+- **High-Resolution Export**: 300 DPI PNG export for presentations and reports
+- **Real-time Display**: Graphs display immediately with interactive controls
 
 ## 🔗 API Information
 
@@ -182,8 +192,10 @@ The script provides:
 
 ### Data Collection Issues
 - **Partial Data**: The script will show which dates have data and which are missing
+- **Missing Data Handling**: Dates with no data are automatically skipped (no errors shown)
 - **API Rate Limiting**: If you get blocked, wait a few minutes before retrying
 - **Date Range Errors**: Ensure dates are in YYYY-MM-DD format and within API range
+- **Large Datasets**: For datasets with 100+ points, consider using the filtering option
 
 ### Getting Help
 If you encounter issues:
