@@ -6,13 +6,22 @@ from datetime import datetime, timedelta
 import time
 import os
 from typing import List, Dict, Optional
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider
 
 class CALFundExtractor:
-    def __init__(self, fund_name: str = None, start_date: str = None, end_date: str = None):
+    def __init__(self, fund_name: str = None, start_date: str = None, end_date: str = None, api_delay: float = None):
         self.base_url = "https://cal.lk/wp-admin/admin-ajax.php"
         self.target_fund_name = fund_name or "Capital Alliance Quantitative Equity Fund"
-        self.start_date = start_date or "2024-06-01"
-        self.end_date = end_date or "2025-09-01"
+        
+        # Set default dates: start from 2013-01-01, end at current date - 1
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        self.start_date = start_date or "2013-01-01"
+        self.end_date = end_date or yesterday
+        
+        # Set default API delay: 0.5 seconds
+        self.api_delay = api_delay or 0.5
+        
         self.csv_filename = f'cal_fund_data_{self.target_fund_name.replace(" ", "_").replace("/", "_")}.csv'
         
     def generate_date_range(self) -> List[str]:
@@ -43,8 +52,12 @@ class CALFundExtractor:
         
         return dates
     
-    def discover_available_funds(self, sample_date: str = "2024-06-01") -> List[str]:
+    def discover_available_funds(self, sample_date: str = None) -> List[str]:
         """Discover all available funds from the API"""
+        # Use current date - 10 if no sample date provided
+        if sample_date is None:
+            sample_date = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
+        
         print(f"Discovering available funds using sample date: {sample_date}")
         
         fund_data = self.fetch_fund_data(sample_date)
@@ -62,7 +75,7 @@ class CALFundExtractor:
         return available_funds
     
     def load_existing_data(self) -> Dict[str, float]:
-        """Load existing data from CSV file if it exists"""
+        """Load existing data from CSV file if it exists, filtered by current date range"""
         if not os.path.exists(self.csv_filename):
             print(f"No existing data file found: {self.csv_filename}")
             return {}
@@ -70,9 +83,27 @@ class CALFundExtractor:
         try:
             df = pd.read_csv(self.csv_filename)
             if 'Date' in df.columns and 'OLD_PRICE' in df.columns:
+                # Convert dates to datetime for comparison
+                df['Date'] = pd.to_datetime(df['Date'])
+                
+                # Filter data to only include dates within the current requested range
+                start_date = pd.to_datetime(self.start_date)
+                end_date = pd.to_datetime(self.end_date)
+                
+                # Filter the dataframe to only include dates within the current range
+                filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
+                
                 # Convert to dictionary with date as key and price as value
-                existing_data = dict(zip(df['Date'].astype(str), df['OLD_PRICE']))
-                print(f"Loaded {len(existing_data)} existing data points from {self.csv_filename}")
+                existing_data = dict(zip(filtered_df['Date'].dt.strftime('%Y-%m-%d'), filtered_df['OLD_PRICE']))
+                
+                total_points = len(df)
+                filtered_points = len(existing_data)
+                
+                if total_points > filtered_points:
+                    print(f"Loaded {filtered_points} existing data points from {self.csv_filename} (filtered from {total_points} total points)")
+                else:
+                    print(f"Loaded {len(existing_data)} existing data points from {self.csv_filename}")
+                
                 return existing_data
             else:
                 print(f"Invalid CSV format in {self.csv_filename}")
@@ -135,22 +166,32 @@ class CALFundExtractor:
             print(f"  Missing data range: {min(missing_dates)} to {max(missing_dates)}")
             print(f"  🔄 Fetching from API for {len(missing_dates)} dates...")
             
+            successful_fetches = 0
+            skipped_dates = 0
+            
             for i, date in enumerate(missing_dates, 1):
                 print(f"  Processing missing date {i}/{len(missing_dates)}: {date}")
                 
                 fund_data = self.fetch_fund_data(date)
                 if fund_data:
                     price = self.extract_target_fund_price(fund_data, date)
-                    if price is not None:
+                    if price is not None and price > 0:  # Only store valid prices
                         price_data[date] = price
+                        successful_fetches += 1
                         print(f"    ✓ Price: {price}")
                     else:
-                        print(f"    ✗ No price data found")
+                        skipped_dates += 1
+                        print(f"    ⚠ No valid price data - skipping date")
                 else:
-                    print(f"    ✗ Failed to fetch data")
+                    skipped_dates += 1
+                    print(f"    ⚠ Failed to fetch data - skipping date")
                 
-                # Add small delay to be respectful to the API
-                time.sleep(0.5)
+                # Add configurable delay to be respectful to the API
+                time.sleep(self.api_delay)
+            
+            print(f"\nFetch Summary:")
+            print(f"  ✓ Successfully fetched: {successful_fetches} dates")
+            print(f"  ⚠ Skipped (no data): {skipped_dates} dates")
         else:
             print(f"  ✅ All {len(dates)} dates already have data - no API calls needed!")
         
@@ -158,7 +199,7 @@ class CALFundExtractor:
         return price_data
     
     def create_graph(self, price_data: Dict[str, float]):
-        """Create a graph showing date vs OLD_PRICE"""
+        """Create an interactive graph showing date vs OLD_PRICE with filtering options"""
         if not price_data:
             print("No data available to create graph")
             return
@@ -168,26 +209,45 @@ class CALFundExtractor:
         df['Date'] = pd.to_datetime(df['Date'])
         df = df.sort_values('Date')
         
-        # Create the plot
-        plt.figure(figsize=(15, 8))
-        plt.plot(df['Date'], df['Price'], marker='o', linewidth=2, markersize=6)
-        plt.title(f'{self.target_fund_name}\nPrice Trend (OLD_PRICE) - {self.start_date} to {self.end_date}', 
-                 fontsize=14, fontweight='bold')
-        plt.xlabel('Date', fontsize=12)
-        plt.ylabel('Price (LKR)', fontsize=12)
-        plt.grid(True, alpha=0.3)
+        # Check if we have too much data and offer filtering
+        if len(df) > 100:
+            print(f"\n⚠ Large dataset detected ({len(df)} data points)")
+            print("Consider using date filtering for better visualization")
+            
+            # Ask user if they want to filter the data
+            filter_choice = input("Would you like to filter the data by date range? (y/n): ").strip().lower()
+            if filter_choice in ['y', 'yes']:
+                df = self._apply_date_filter(df)
+        
+        # Create interactive plot
+        fig, ax = plt.subplots(figsize=(16, 10))
+        
+        # Plot the data
+        line, = ax.plot(df['Date'], df['Price'], marker='o', linewidth=2, markersize=4, alpha=0.7)
+        
+        # Set up the plot
+        ax.set_title(f'{self.target_fund_name}\nPrice Trend (OLD_PRICE) - {self.start_date} to {self.end_date}', 
+                     fontsize=16, fontweight='bold', pad=20)
+        ax.set_xlabel('Date', fontsize=14)
+        ax.set_ylabel('Price (LKR)', fontsize=14)
+        ax.grid(True, alpha=0.3)
         
         # Format x-axis dates
-        plt.xticks(rotation=45)
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
+        
+        # Enable interactive navigation toolbar
         plt.tight_layout()
+        
+        # Ensure the navigation toolbar is enabled for zoom/pan functionality
+        fig.canvas.manager.toolbar.update()
         
         # Save the graph
         graph_filename = f'cal_fund_price_trend_{self.target_fund_name.replace(" ", "_").replace("/", "_")}.png'
         plt.savefig(graph_filename, dpi=300, bbox_inches='tight')
         print(f"Graph saved as '{graph_filename}'")
         
-        # Show the graph
-        plt.show()
+        # Show the graph and keep it open
+        plt.show(block=True)
         
         # Print summary statistics
         print(f"\nSummary Statistics:")
@@ -195,6 +255,58 @@ class CALFundExtractor:
         print(f"Date range: {df['Date'].min().strftime('%Y-%m-%d')} to {df['Date'].max().strftime('%Y-%m-%d')}")
         print(f"Price range: {df['Price'].min():.4f} to {df['Price'].max():.4f}")
         print(f"Average price: {df['Price'].mean():.4f}")
+        
+        # Interactive instructions
+        print(f"\n📊 Interactive Graph Features:")
+        print(f"  • Mouse wheel: Scroll UP to zoom IN, scroll DOWN to zoom OUT")
+        print(f"  • Click and drag to pan around the graph")
+        print(f"  • Toolbar buttons:")
+        print(f"    - 🏠 Home: Reset to original view (zoom out completely)")
+        print(f"    - ⬅️ Back: Go to previous zoom level")
+        print(f"    - ➡️ Forward: Go to next zoom level")
+        print(f"    - ✋ Pan: Move around when zoomed")
+        print(f"    - 🔍 Zoom: Click and drag to zoom into area")
+        print(f"  • Close the graph window to continue")
+    
+    def _apply_date_filter(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Apply date filtering to reduce data points"""
+        print(f"\nCurrent data range: {df['Date'].min().strftime('%Y-%m-%d')} to {df['Date'].max().strftime('%Y-%m-%d')}")
+        
+        # Get filter start date
+        while True:
+            start_input = input("Enter filter start date (YYYY-MM-DD) or press Enter to skip: ").strip()
+            if not start_input:
+                filter_start = df['Date'].min()
+                break
+            try:
+                filter_start = pd.to_datetime(start_input)
+                if filter_start >= df['Date'].min():
+                    break
+                else:
+                    print("Start date must be within the data range")
+            except:
+                print("Invalid date format. Please use YYYY-MM-DD")
+        
+        # Get filter end date
+        while True:
+            end_input = input("Enter filter end date (YYYY-MM-DD) or press Enter to skip: ").strip()
+            if not end_input:
+                filter_end = df['Date'].max()
+                break
+            try:
+                filter_end = pd.to_datetime(end_input)
+                if filter_end <= df['Date'].max() and filter_end >= filter_start:
+                    break
+                else:
+                    print("End date must be within the data range and after start date")
+            except:
+                print("Invalid date format. Please use YYYY-MM-DD")
+        
+        # Apply filter
+        filtered_df = df[(df['Date'] >= filter_start) & (df['Date'] <= filter_end)]
+        print(f"Filtered data: {len(filtered_df)} points from {filtered_df['Date'].min().strftime('%Y-%m-%d')} to {filtered_df['Date'].max().strftime('%Y-%m-%d')}")
+        
+        return filtered_df
     
     def save_data_to_csv(self, price_data: Dict[str, float]):
         """Save the collected data to CSV file"""
@@ -244,6 +356,32 @@ def get_user_date_input(prompt: str, default: str) -> str:
         except ValueError:
             print("Invalid date format. Please use YYYY-MM-DD format (e.g., 2024-06-01)")
 
+def get_user_api_delay_input(prompt: str, default: float) -> float:
+    """Get API delay input from user with validation"""
+    while True:
+        user_input = input(f"{prompt} (default: {default} seconds): ").strip()
+        if not user_input:
+            return default
+        
+        try:
+            delay = float(user_input)
+            if delay < 0:
+                print("Delay must be 0 or greater")
+                continue
+            if delay == 0:
+                print("Warning: No delay may overload the server and cause rate limiting")
+                confirm = input("Continue with no delay? (y/n): ").strip().lower()
+                if confirm not in ['y', 'yes']:
+                    continue
+            elif delay > 10:
+                print("Warning: Delay greater than 10 seconds may significantly slow down data collection")
+                confirm = input("Continue anyway? (y/n): ").strip().lower()
+                if confirm not in ['y', 'yes']:
+                    continue
+            return delay
+        except ValueError:
+            print("Invalid delay format. Please enter a number (e.g., 0, 0.5, 1.0, 2)")
+
 def main():
     """Main function to run the fund data extraction and visualization"""
     print("CAL Fund Data Extractor")
@@ -259,16 +397,21 @@ def main():
     else:
         selected_fund = get_user_fund_selection(available_funds)
     
-    # Get date range from user
-    start_date = get_user_date_input("Enter start date (YYYY-MM-DD)", "2024-06-01")
-    end_date = get_user_date_input("Enter end date (YYYY-MM-DD)", "2025-09-01")
+    # Get date range from user (with new defaults)
+    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    start_date = get_user_date_input("Enter start date (YYYY-MM-DD)", "2013-01-01")
+    end_date = get_user_date_input("Enter end date (YYYY-MM-DD)", yesterday)
+    
+    # Get API delay from user
+    api_delay = get_user_api_delay_input("Enter API delay between requests", 0.5)
     
     # Create the main extractor with user selections
-    extractor = CALFundExtractor(selected_fund, start_date, end_date)
+    extractor = CALFundExtractor(selected_fund, start_date, end_date, api_delay)
     
     print("\n" + "=" * 50)
     print(f"Target Fund: {extractor.target_fund_name}")
     print(f"Date Range: {extractor.start_date} - {extractor.end_date} (1st & 15th of each month)")
+    print(f"API Delay: {extractor.api_delay} seconds between requests")
     print(f"Data will be saved to: {extractor.csv_filename}")
     print("=" * 50)
     
