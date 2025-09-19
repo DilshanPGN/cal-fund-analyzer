@@ -75,6 +75,42 @@ class CALFundExtractor:
         print(f"Found {len(available_funds)} available funds")
         return available_funds
     
+    def get_fund_earliest_date(self, fund_name: str) -> str:
+        """Get the earliest date available for a specific fund from its CSV file"""
+        csv_filename = f'cal_fund_data_{fund_name.replace(" ", "_").replace("/", "_")}.csv'
+        
+        if not os.path.exists(csv_filename):
+            print(f"No CSV file found for {fund_name}, using default start date")
+            return "2013-01-01"
+        
+        try:
+            df = pd.read_csv(csv_filename)
+            if 'Date' in df.columns and len(df) > 0:
+                df['Date'] = pd.to_datetime(df['Date'])
+                earliest_date = df['Date'].min().strftime("%Y-%m-%d")
+                print(f"Found earliest date for {fund_name}: {earliest_date}")
+                return earliest_date
+            else:
+                print(f"Invalid CSV format for {fund_name}, using default start date")
+                return "2013-01-01"
+        except Exception as e:
+            print(f"Error reading CSV for {fund_name}: {e}, using default start date")
+            return "2013-01-01"
+    
+    def get_all_funds_earliest_dates(self) -> Dict[str, str]:
+        """Get the earliest date for all available funds"""
+        available_funds = self.discover_available_funds()
+        earliest_dates = {}
+        
+        print(f"\nDetecting earliest dates for {len(available_funds)} funds:")
+        print("-" * 50)
+        
+        for fund_name in available_funds:
+            earliest_date = self.get_fund_earliest_date(fund_name)
+            earliest_dates[fund_name] = earliest_date
+        
+        return earliest_dates
+    
     def load_existing_data(self) -> Dict[str, float]:
         """Load existing data from CSV file if it exists, filtered by current date range"""
         if not os.path.exists(self.csv_filename):
@@ -454,12 +490,14 @@ class CALFundExtractor:
         
         return all_funds_data
 
-def get_user_fund_selection(available_funds: List[str]) -> str:
-    """Get fund selection from user"""
+def get_user_fund_selection(available_funds: List[str], earliest_dates: Dict[str, str]) -> str:
+    """Get fund selection from user with earliest dates displayed"""
     print("\nAvailable Funds:")
-    print("-" * 50)
+    print("-" * 80)
     for i, fund in enumerate(available_funds, 1):
+        earliest_date = earliest_dates.get(fund, "2013-01-01")
         print(f"{i:2d}. {fund}")
+        print(f"    📅 Data available from: {earliest_date}")
     
     while True:
         try:
@@ -525,9 +563,21 @@ def main():
         print("Running INIT command - collecting data for all available funds")
         print("=" * 50)
         
-        # Get date range from user (with new defaults)
+        # Get date range from user (with earliest available date as default)
         yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-        start_date = get_user_date_input("Enter start date (YYYY-MM-DD)", "2013-01-01")
+        
+        # Get earliest date across all funds for init mode
+        temp_extractor = CALFundExtractor()
+        earliest_dates = temp_extractor.get_all_funds_earliest_dates()
+        
+        # Find the earliest date across all funds
+        if earliest_dates:
+            earliest_overall = min(earliest_dates.values())
+            print(f"\nEarliest data available across all funds: {earliest_overall}")
+        else:
+            earliest_overall = "2013-01-01"
+        
+        start_date = get_user_date_input("Enter start date (YYYY-MM-DD)", earliest_overall)
         end_date = get_user_date_input("Enter end date (YYYY-MM-DD)", yesterday)
         
         # Get API delay from user
@@ -561,19 +611,23 @@ def main():
     print("Running in NORMAL mode - analyzing a specific fund")
     print("=" * 50)
     
-    # Create a temporary extractor to discover available funds
+    # Create a temporary extractor to discover available funds and their earliest dates
     temp_extractor = CALFundExtractor()
     available_funds = temp_extractor.discover_available_funds()
     
     if not available_funds:
         print("Failed to discover available funds. Using default fund.")
         selected_fund = "Capital Alliance Quantitative Equity Fund"
+        earliest_dates = {selected_fund: "2013-01-01"}
     else:
-        selected_fund = get_user_fund_selection(available_funds)
+        # Get earliest dates for all funds
+        earliest_dates = temp_extractor.get_all_funds_earliest_dates()
+        selected_fund = get_user_fund_selection(available_funds, earliest_dates)
     
-    # Get date range from user (with new defaults)
+    # Get date range from user (with fund-specific defaults)
     yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    start_date = get_user_date_input("Enter start date (YYYY-MM-DD)", "2013-01-01")
+    fund_earliest_date = earliest_dates.get(selected_fund, "2013-01-01")
+    start_date = get_user_date_input("Enter start date (YYYY-MM-DD)", fund_earliest_date)
     end_date = get_user_date_input("Enter end date (YYYY-MM-DD)", yesterday)
     
     # Get API delay from user

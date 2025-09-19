@@ -8,7 +8,9 @@ A comprehensive Python tool for extracting and analyzing unit trust fund data fr
 - **Bulk Data Collection**: Init command efficiently collects data for ALL available funds in one operation
 - **Interactive Fund Selection**: Automatically discovers and allows selection from all available CAL funds
 - **Smart Data Caching**: Loads existing data to avoid redundant API calls and speeds up analysis
-- **Extended Historical Data**: Default date range from 2013-01-01 to current date - 1
+- **Auto Start Date Detection**: Automatically detects the earliest available date for each fund from existing CSV files
+- **Fund-Specific Defaults**: Each fund uses its own earliest date as the default start date (no more invalid date ranges)
+- **Extended Historical Data**: Default date range from fund-specific earliest date to current date - 1
 - **Flexible Date Ranges**: Customizable start and end dates with intelligent date generation
 - **Strategic Sampling**: Collects data on 1st and 15th of each month for comprehensive trend analysis
 - **Dynamic File Naming**: Automatically generates fund-specific CSV and graph filenames
@@ -87,41 +89,67 @@ Running in NORMAL mode - analyzing a specific fund
 Discovering available funds using sample date: 2024-06-01
 Found 13 available funds
 
-Available Funds:
+Detecting earliest dates for 13 funds:
 --------------------------------------------------
- 1. Capital Alliance Quantitative Equity Fund
- 2. CAL Fixed Income Opportunites Fund
- 3. Capital Alliance Investment Grade Fund
- 4. Capital Alliance Balanced Fund
- 5. CAL Money Market Fund
- 6. Capital Alliance Gilt Fund
- 7. Capital Alliance Income Fund
- 8. Capital Alliance Gilt Trading Fund
- 9. Capital Alliance Investment Grade Fund
-10. Capital Alliance High Yield Fund
-11. Capital Alliance Corporate Treasury Fund
-12. Capital Alliance Medium Risk Debt Fund
-13. CAL Five year Optimum Fund
+Found earliest date for Capital Alliance Corporate Treasury Fund: 2013-04-01
+Found earliest date for Capital Alliance Medium Risk Debt Fund: 2013-12-15
+Found earliest date for CAL Fixed Income Opportunities Fund: 2013-12-15
+Found earliest date for CAL Money Market Fund: 2015-01-01
+Found earliest date for Capital Alliance Gilt Fund: 2013-08-15
+Found earliest date for Capital Alliance Income Fund: 2014-03-15
+Found earliest date for Capital Alliance Gilt Trading Fund: 2015-01-15
+Found earliest date for Capital Alliance Investment Grade Fund: 2013-09-01
+Found earliest date for Capital Alliance High Yield Fund: 2013-01-01
+Found earliest date for Capital Alliance Quantitative Equity Fund: 2013-01-15
+Found earliest date for Capital Alliance Balanced Fund: 2015-02-01
+Found earliest date for CAL Five year Optimum Fund: 2023-07-01
+Found earliest date for FYCF: 2024-09-15
 
-Select a fund (1-13) or press Enter for default: 1
+Available Funds:
+--------------------------------------------------------------------------------
+ 1. Capital Alliance Corporate Treasury Fund
+    📅 Data available from: 2013-04-01
+ 2. Capital Alliance Medium Risk Debt Fund
+    📅 Data available from: 2013-12-15
+ 3. CAL Fixed Income Opportunities Fund
+    📅 Data available from: 2013-12-15
+ 4. CAL Money Market Fund
+    📅 Data available from: 2015-01-01
+ 5. Capital Alliance Gilt Fund
+    📅 Data available from: 2013-08-15
+ 6. Capital Alliance Income Fund
+    📅 Data available from: 2014-03-15
+ 7. Capital Alliance Gilt Trading Fund
+    📅 Data available from: 2015-01-15
+ 8. Capital Alliance Investment Grade Fund
+    📅 Data available from: 2013-09-01
+ 9. Capital Alliance High Yield Fund
+    📅 Data available from: 2013-01-01
+10. Capital Alliance Quantitative Equity Fund
+    📅 Data available from: 2013-01-15
+11. Capital Alliance Balanced Fund
+    📅 Data available from: 2015-02-01
+12. CAL Five year Optimum Fund
+    📅 Data available from: 2023-07-01
+13. FYCF
+    📅 Data available from: 2024-09-15
 
-Enter start date (YYYY-MM-DD) (default: 2013-01-01): 
+Select a fund (1-13) or press Enter for default: 12
+
+Enter start date (YYYY-MM-DD) (default: 2023-07-01): 
 Enter end date (YYYY-MM-DD) (default: 2024-12-19): 
 
 ==================================================
-Target Fund: Capital Alliance Quantitative Equity Fund
-Date Range: 2013-01-01 - 2024-12-19 (1st & 15th of each month)
-Data will be saved to: cal_fund_data_Capital_Alliance_Quantitative_Equity_Fund.csv
+Target Fund: CAL Five year Optimum Fund
+Date Range: 2023-07-01 - 2024-12-19 (1st & 15th of each month)
+Data will be saved to: cal_fund_data_CAL_Five_year_Optimum_Fund.csv
 ==================================================
 
 Data Coverage Summary:
-  Total dates in range: 32
-  Existing data points: 15
-  Missing data points: 17
-  Existing data range: 2024-06-01 to 2024-12-15
-  ✓ Using cached data for 15 dates
-  Missing data range: 2025-01-01 to 2025-09-01
-  🔄 Fetching from API for 17 dates...
+  Total dates in range: 12
+  Existing data points: 12
+  Missing data points: 0
+  ✅ All 12 dates already have data - no API calls needed!
 ```
 
 ### Example Init Mode Session
@@ -131,6 +159,26 @@ CAL Fund Data Extractor
 Running INIT command - collecting data for all available funds
 ==================================================
 
+Discovering available funds using sample date: 2024-12-09
+Found 13 available funds
+
+Detecting earliest dates for 13 funds:
+--------------------------------------------------
+Found earliest date for Capital Alliance Corporate Treasury Fund: 2013-04-01
+Found earliest date for Capital Alliance Medium Risk Debt Fund: 2013-12-15
+Found earliest date for CAL Fixed Income Opportunities Fund: 2013-12-15
+Found earliest date for CAL Money Market Fund: 2015-01-01
+Found earliest date for Capital Alliance Gilt Fund: 2013-08-15
+Found earliest date for Capital Alliance Income Fund: 2014-03-15
+Found earliest date for Capital Alliance Gilt Trading Fund: 2015-01-15
+Found earliest date for Capital Alliance Investment Grade Fund: 2013-09-01
+Found earliest date for Capital Alliance High Yield Fund: 2013-01-01
+Found earliest date for Capital Alliance Quantitative Equity Fund: 2013-01-15
+Found earliest date for Capital Alliance Balanced Fund: 2015-02-01
+Found earliest date for CAL Five year Optimum Fund: 2023-07-01
+Found earliest date for FYCF: 2024-09-15
+
+Earliest data available across all funds: 2013-01-01
 Enter start date (YYYY-MM-DD) (default: 2013-01-01): 
 Enter end date (YYYY-MM-DD) (default: 2024-12-19): 
 
@@ -193,6 +241,32 @@ You can now run the normal mode to analyze specific funds:
 2. **Analyze individually**: Use `python cal_fund_extractor.py` to analyze specific funds
 3. **Periodic updates**: Re-run init command to refresh data with new dates
 
+## 📅 Fund-Specific Start Dates
+
+The system automatically detects the earliest available date for each fund:
+
+| Fund Name | Earliest Date | Data Points |
+|-----------|---------------|-------------|
+| Capital Alliance High Yield Fund | 2013-01-01 | 308 |
+| Capital Alliance Quantitative Equity Fund | 2013-01-15 | 307 |
+| Capital Alliance Corporate Treasury Fund | 2013-04-01 | 302 |
+| Capital Alliance Gilt Fund | 2013-08-15 | 293 |
+| Capital Alliance Investment Grade Fund | 2013-09-01 | 292 |
+| Capital Alliance Medium Risk Debt Fund | 2013-12-15 | 285 |
+| CAL Fixed Income Opportunities Fund | 2013-12-15 | 285 |
+| Capital Alliance Income Fund | 2014-03-15 | 279 |
+| CAL Money Market Fund | 2015-01-01 | 260 |
+| Capital Alliance Gilt Trading Fund | 2015-01-15 | 259 |
+| Capital Alliance Balanced Fund | 2015-02-01 | 258 |
+| CAL Five year Optimum Fund | 2023-07-01 | 56 |
+| FYCF | 2024-09-15 | 27 |
+
+**Key Benefits:**
+- **No Invalid Dates**: Each fund uses its actual earliest date as default
+- **Optimal Data Collection**: Avoids API calls for non-existent data
+- **User-Friendly**: Clear display of data availability for each fund
+- **Efficient Analysis**: Focuses on actual data ranges for each fund
+
 ## 📊 Output Files
 
 ### Normal Mode Output
@@ -247,6 +321,14 @@ The script automatically discovers all available funds from the CAL API by makin
 - **Init Mode Caching**: Init command uses smart caching - subsequent runs only fetch missing data
 - **Cross-Fund Efficiency**: Single API call per date collects data for all funds simultaneously
 
+### Auto Start Date Detection
+- **Fund-Specific Defaults**: Each fund automatically uses its earliest available date as the default start date
+- **CSV File Analysis**: Reads existing CSV files to determine the earliest date for each fund
+- **Smart Date Ranges**: Prevents invalid date ranges by using fund-specific start dates
+- **Visual Indicators**: Shows each fund's earliest available date in the selection menu
+- **Init Mode Intelligence**: Uses the earliest date across all funds for comprehensive data collection
+- **No More Invalid Dates**: Eliminates API calls for dates before a fund existed
+
 ### Init Command Features
 - **Bulk Data Collection**: Efficiently collects data for ALL available funds in one operation
 - **Single API Call Per Date**: One request per date fetches data for all funds simultaneously
@@ -256,9 +338,10 @@ The script automatically discovers all available funds from the CAL API by makin
 - **Efficiency Reporting**: Reports total files created, updated, and data points collected
 
 ### Interactive Configuration
-- **Fund Selection**: Choose from a dynamically generated list of available funds (Normal mode)
+- **Fund Selection**: Choose from a dynamically generated list of available funds with earliest dates displayed (Normal mode)
+- **Auto Start Dates**: Each fund automatically uses its earliest available date as the default start date
 - **Custom Date Ranges**: Specify any start and end date within the API's data range
-- **Default Values**: Sensible defaults are provided for quick execution (2013-01-01 to current date - 1)
+- **Smart Defaults**: Fund-specific defaults prevent invalid date ranges and optimize data collection
 - **Input Validation**: Comprehensive validation for all user inputs
 
 ### Interactive Graph Features
