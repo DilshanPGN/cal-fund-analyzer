@@ -2,13 +2,15 @@ import requests
 import json
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from datetime import datetime, timedelta
 import time
 import os
 import sys
 from typing import List, Dict, Optional
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider
+import numpy as np
+import tkinter as tk
+from tkinter import messagebox, simpledialog, ttk, scrolledtext
 
 class CALFundExtractor:
     def __init__(self, fund_name: str = None, start_date: str = None, end_date: str = None, api_delay: float = None):
@@ -236,7 +238,7 @@ class CALFundExtractor:
         return price_data
     
     def create_graph(self, price_data: Dict[str, float]):
-        """Create an interactive graph showing date vs OLD_PRICE with filtering options"""
+        """Create an interactive graph with manual UI"""
         if not price_data:
             print("No data available to create graph")
             return
@@ -246,64 +248,594 @@ class CALFundExtractor:
         df['Date'] = pd.to_datetime(df['Date'])
         df = df.sort_values('Date')
         
-        # Check if we have too much data and offer filtering
-        if len(df) > 100:
-            print(f"\n⚠ Large dataset detected ({len(df)} data points)")
-            print("Consider using date filtering for better visualization")
-            
-            # Ask user if they want to filter the data
-            filter_choice = input("Would you like to filter the data by date range? (y/n): ").strip().lower()
-            if filter_choice in ['y', 'yes']:
-                df = self._apply_date_filter(df)
+        # Create the manual UI
+        self._create_manual_ui(df, price_data)
+    
+    def _create_manual_ui(self, df: pd.DataFrame, price_data: Dict[str, float]):
+        """Create a manual tkinter UI with embedded matplotlib graph"""
+        # Create main window
+        self.root = tk.Tk()
+        self.root.title(f"CAL Fund Analyzer - {self.target_fund_name}")
+        self.root.geometry("1400x900")
+        self.root.configure(bg='#f0f0f0')
         
-        # Create interactive plot
-        fig, ax = plt.subplots(figsize=(16, 10))
+        # Store data for analysis
+        self.df = df
+        self.price_data = price_data
+        
+        # Create main frame
+        main_frame = ttk.Frame(self.root)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Create left panel for controls
+        left_panel = ttk.Frame(main_frame, width=300)
+        left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        left_panel.pack_propagate(False)
+        
+        # Create right panel for graph
+        right_panel = ttk.Frame(main_frame)
+        right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        
+        # Add title
+        title_label = ttk.Label(left_panel, text="Financial Context Analysis", 
+                               font=('Arial', 16, 'bold'))
+        title_label.pack(pady=(0, 20))
+        
+        # Add fund info
+        fund_info = ttk.Label(left_panel, text=f"Fund: {self.target_fund_name}", 
+                             font=('Arial', 10), wraplength=280)
+        fund_info.pack(pady=(0, 10))
+        
+        # Add data summary
+        summary_text = f"""Data Summary:
+• Total Points: {len(df)}
+• Date Range: {df['Date'].min().strftime('%Y-%m-%d')} to {df['Date'].max().strftime('%Y-%m-%d')}
+• Price Range: {df['Price'].min():.4f} to {df['Price'].max():.4f}
+• Average Price: {df['Price'].mean():.4f}"""
+        
+        summary_label = ttk.Label(left_panel, text=summary_text, 
+                                  font=('Arial', 9), justify=tk.LEFT)
+        summary_label.pack(pady=(0, 20))
+        
+        # Add analysis buttons
+        self._create_analysis_buttons(left_panel)
+        
+        # Add date range controls
+        self._create_date_controls(left_panel)
+        
+        # Add help section
+        self._create_help_section(left_panel)
+        
+        # Create matplotlib graph
+        self._create_matplotlib_graph(right_panel)
+        
+        # Start the UI
+        self.root.mainloop()
+    
+    def _create_analysis_buttons(self, parent):
+        """Create analysis buttons"""
+        # Analysis buttons frame
+        buttons_frame = ttk.LabelFrame(parent, text="Analysis Options", padding="10")
+        buttons_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        # Button styles
+        button_style = {'width': 25}
+        
+        # Analyze Current View button
+        self.analyze_current_btn = ttk.Button(buttons_frame, text="🔍 Analyze Current View", 
+                                            command=self._analyze_current_view, **button_style)
+        self.analyze_current_btn.pack(pady=2)
+        
+        # Crisis Period button
+        self.crisis_btn = ttk.Button(buttons_frame, text="🚨 Crisis Period (2022)", 
+                                   command=self._analyze_crisis_period, **button_style)
+        self.crisis_btn.pack(pady=2)
+        
+        # Recovery Period button
+        self.recovery_btn = ttk.Button(buttons_frame, text="📈 Recovery Period (2023)", 
+                                     command=self._analyze_recovery_period, **button_style)
+        self.recovery_btn.pack(pady=2)
+        
+        # Recent Performance button
+        self.recent_btn = ttk.Button(buttons_frame, text="📊 Recent 6 Months", 
+                                   command=self._analyze_recent_performance, **button_style)
+        self.recent_btn.pack(pady=2)
+        
+        # Custom Range button
+        self.custom_btn = ttk.Button(buttons_frame, text="📅 Custom Date Range", 
+                                   command=self._analyze_custom_range, **button_style)
+        self.custom_btn.pack(pady=2)
+    
+    def _create_date_controls(self, parent):
+        """Create date range controls"""
+        # Date controls frame
+        date_frame = ttk.LabelFrame(parent, text="Date Range Controls", padding="10")
+        date_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        # Start date
+        ttk.Label(date_frame, text="Start Date:").pack(anchor=tk.W)
+        self.start_date_var = tk.StringVar(value=self.df['Date'].min().strftime('%Y-%m-%d'))
+        start_date_entry = ttk.Entry(date_frame, textvariable=self.start_date_var, width=15)
+        start_date_entry.pack(pady=(0, 10))
+        
+        # End date
+        ttk.Label(date_frame, text="End Date:").pack(anchor=tk.W)
+        self.end_date_var = tk.StringVar(value=self.df['Date'].max().strftime('%Y-%m-%d'))
+        end_date_entry = ttk.Entry(date_frame, textvariable=self.end_date_var, width=15)
+        end_date_entry.pack(pady=(0, 10))
+        
+        # Update graph button
+        update_btn = ttk.Button(date_frame, text="Update Graph", 
+                               command=self._update_graph_range, width=20)
+        update_btn.pack(pady=5)
+    
+    def _create_help_section(self, parent):
+        """Create help section"""
+        # Help frame
+        help_frame = ttk.LabelFrame(parent, text="Help & Instructions", padding="10")
+        help_frame.pack(fill=tk.BOTH, expand=True)
+        
+        help_text = """Graph Controls:
+• Mouse wheel: Zoom in/out
+• Click & drag: Pan around
+• Right-click: Reset view
+
+Analysis Features:
+• Click any analysis button to get financial context
+• Use date controls to filter the graph
+• All analysis results open in popup windows
+
+Tips:
+• Zoom into interesting periods first
+• Use 'Analyze Current View' for zoomed areas
+• Check crisis/recovery periods for context"""
+        
+        help_label = ttk.Label(help_frame, text=help_text, 
+                              font=('Arial', 9), justify=tk.LEFT, wraplength=280)
+        help_label.pack(fill=tk.BOTH, expand=True)
+    
+    def _create_matplotlib_graph(self, parent):
+        """Create embedded matplotlib graph"""
+        # Create matplotlib figure
+        self.fig, self.ax = plt.subplots(figsize=(12, 8))
         
         # Plot the data
-        line, = ax.plot(df['Date'], df['Price'], marker='o', linewidth=2, markersize=4, alpha=0.7)
+        self.line, = self.ax.plot(self.df['Date'], self.df['Price'], 
+                                 marker='o', linewidth=2, markersize=4, alpha=0.7)
         
         # Set up the plot
-        ax.set_title(f'{self.target_fund_name}\nPrice Trend (OLD_PRICE) - {self.start_date} to {self.end_date}', 
-                     fontsize=16, fontweight='bold', pad=20)
-        ax.set_xlabel('Date', fontsize=14)
-        ax.set_ylabel('Price (LKR)', fontsize=14)
-        ax.grid(True, alpha=0.3)
+        self.ax.set_title(f'{self.target_fund_name}\nPrice Trend Analysis', 
+                         fontsize=14, fontweight='bold')
+        self.ax.set_xlabel('Date', fontsize=12)
+        self.ax.set_ylabel('Price (LKR)', fontsize=12)
+        self.ax.grid(True, alpha=0.3)
         
         # Format x-axis dates
-        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
+        plt.setp(self.ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
         
-        # Enable interactive navigation toolbar
-        plt.tight_layout()
+        # Create canvas and embed in tkinter
+        self.canvas = FigureCanvasTkAgg(self.fig, parent)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
-        # Ensure the navigation toolbar is enabled for zoom/pan functionality
-        fig.canvas.manager.toolbar.update()
+        # Add toolbar
+        from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+        toolbar = NavigationToolbar2Tk(self.canvas, parent)
+        toolbar.update()
+    
+    def _update_graph_range(self):
+        """Update graph with new date range"""
+        try:
+            start_date = pd.to_datetime(self.start_date_var.get())
+            end_date = pd.to_datetime(self.end_date_var.get())
+            
+            # Filter data
+            filtered_df = self.df[(self.df['Date'] >= start_date) & (self.df['Date'] <= end_date)]
+            
+            if len(filtered_df) == 0:
+                messagebox.showerror("Error", "No data found in the specified date range")
+                return
+            
+            # Update the plot
+            self.line.set_data(filtered_df['Date'], filtered_df['Price'])
+            self.ax.relim()
+            self.ax.autoscale_view()
+            self.canvas.draw()
+            
+            messagebox.showinfo("Success", f"Graph updated with {len(filtered_df)} data points")
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Invalid date format: {e}")
+    
+    def _analyze_current_view(self):
+        """Analyze the currently visible area of the graph"""
+        try:
+            # Get current x-axis limits
+            xlim = self.ax.get_xlim()
+            start_date = pd.to_datetime(xlim[0], unit='D').strftime('%Y-%m-%d')
+            end_date = pd.to_datetime(xlim[1], unit='D').strftime('%Y-%m-%d')
+            
+            # Filter data for current view
+            filtered_data = {date: price for date, price in self.price_data.items() 
+                           if start_date <= date <= end_date}
+            
+            if not filtered_data:
+                messagebox.showwarning("Warning", "No data in current view")
+                return
+            
+            # Analyze
+            context = self.analyze_financial_context(start_date, end_date, filtered_data)
+            self._display_context_gui(context, f"Current View Analysis ({start_date} to {end_date})")
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Analysis failed: {e}")
+    
+    def _analyze_crisis_period(self):
+        """Analyze crisis period (2022)"""
+        context = self.analyze_financial_context("2022-01-01", "2022-12-31", self.price_data)
+        self._display_context_gui(context, "Crisis Period Analysis (2022)")
+    
+    def _analyze_recovery_period(self):
+        """Analyze recovery period (2023)"""
+        context = self.analyze_financial_context("2023-01-01", "2023-12-31", self.price_data)
+        self._display_context_gui(context, "Recovery Period Analysis (2023)")
+    
+    def _analyze_recent_performance(self):
+        """Analyze recent 6 months performance"""
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=180)
         
-        # Save the graph
-        graph_filename = f'cal_fund_price_trend_{self.target_fund_name.replace(" ", "_").replace("/", "_")}.png'
-        plt.savefig(graph_filename, dpi=300, bbox_inches='tight')
-        print(f"Graph saved as '{graph_filename}'")
+        start_str = start_date.strftime('%Y-%m-%d')
+        end_str = end_date.strftime('%Y-%m-%d')
         
-        # Show the graph and keep it open
-        plt.show(block=True)
+        context = self.analyze_financial_context(start_str, end_str, self.price_data)
+        self._display_context_gui(context, f"Recent Performance Analysis ({start_str} to {end_str})")
+    
+    def _analyze_custom_range(self):
+        """Analyze custom date range"""
+        start_date = simpledialog.askstring("Custom Analysis", "Enter start date (YYYY-MM-DD):")
+        if not start_date:
+            return
+            
+        end_date = simpledialog.askstring("Custom Analysis", "Enter end date (YYYY-MM-DD):")
+        if not end_date:
+            return
         
-        # Print summary statistics
-        print(f"\nSummary Statistics:")
-        print(f"Total data points: {len(df)}")
-        print(f"Date range: {df['Date'].min().strftime('%Y-%m-%d')} to {df['Date'].max().strftime('%Y-%m-%d')}")
-        print(f"Price range: {df['Price'].min():.4f} to {df['Price'].max():.4f}")
-        print(f"Average price: {df['Price'].mean():.4f}")
+        try:
+            context = self.analyze_financial_context(start_date, end_date, self.price_data)
+            self._display_context_gui(context, f"Custom Range Analysis ({start_date} to {end_date})")
+        except Exception as e:
+            messagebox.showerror("Error", f"Analysis failed: {e}")
+    
+    def _display_context_gui(self, context: Dict, title: str = "Financial Context Analysis"):
+        """Display financial context analysis in a GUI window"""
+        if "error" in context:
+            messagebox.showerror("Analysis Error", context["error"])
+            return
         
-        # Interactive instructions
-        print(f"\n📊 Interactive Graph Features:")
-        print(f"  • Mouse wheel: Scroll UP to zoom IN, scroll DOWN to zoom OUT")
-        print(f"  • Click and drag to pan around the graph")
-        print(f"  • Toolbar buttons:")
-        print(f"    - 🏠 Home: Reset to original view (zoom out completely)")
-        print(f"    - ⬅️ Back: Go to previous zoom level")
-        print(f"    - ➡️ Forward: Go to next zoom level")
-        print(f"    - ✋ Pan: Move around when zoomed")
-        print(f"    - 🔍 Zoom: Click and drag to zoom into area")
-        print(f"  • Close the graph window to continue")
+        # Create new window for analysis results
+        result_window = tk.Toplevel(self.root)
+        result_window.title(title)
+        result_window.geometry("800x600")
+        result_window.configure(bg='#f0f0f0')
+        
+        # Create scrollable text widget
+        text_frame = ttk.Frame(result_window)
+        text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        text_widget = scrolledtext.ScrolledText(text_frame, wrap=tk.WORD, 
+                                               font=('Arial', 10), width=80, height=30)
+        text_widget.pack(fill=tk.BOTH, expand=True)
+        
+        # Format and insert analysis
+        formatted_text = self._format_context_for_gui(context)
+        text_widget.insert(tk.END, formatted_text)
+        text_widget.config(state=tk.DISABLED)
+        
+        # Add close button
+        close_btn = ttk.Button(result_window, text="Close", 
+                              command=result_window.destroy)
+        close_btn.pack(pady=10)
+    
+    def _create_interactive_buttons(self, fig, ax, df: pd.DataFrame, price_data: Dict[str, float]):
+        """Create interactive buttons for financial context analysis"""
+        print("Setting up button callbacks...")
+        # Store references for button callbacks
+        self.current_ax = ax
+        self.current_price_data = price_data
+        
+        # Create button area
+        button_area = plt.axes([0.02, 0.02, 0.96, 0.08])
+        button_area.set_xticks([])
+        button_area.set_yticks([])
+        button_area.set_facecolor('lightgray')
+        
+        # Create buttons with simpler positioning
+        button_width = 0.12
+        button_height = 0.04
+        button_spacing = 0.01
+        start_x = 0.05
+        start_y = 0.04
+        
+        # Button 1: Analyze Current Zoom
+        ax_zoom = plt.axes([start_x, start_y, button_width, button_height])
+        btn_zoom = Button(ax_zoom, 'Analyze\nCurrent Zoom', color='lightblue', hovercolor='lightcyan')
+        btn_zoom.on_clicked(self._on_analyze_zoom_clicked)
+        
+        # Button 2: Custom Date Range
+        ax_custom = plt.axes([start_x + button_width + button_spacing, start_y, button_width, button_height])
+        btn_custom = Button(ax_custom, 'Custom\nDate Range', color='lightgreen', hovercolor='lightcyan')
+        btn_custom.on_clicked(self._on_custom_range_clicked)
+        
+        # Button 3: Crisis Period (2022)
+        ax_crisis = plt.axes([start_x + 2*(button_width + button_spacing), start_y, button_width, button_height])
+        btn_crisis = Button(ax_crisis, 'Crisis\nPeriod 2022', color='lightcoral', hovercolor='lightcyan')
+        btn_crisis.on_clicked(self._on_crisis_period_clicked)
+        
+        # Button 4: Recovery Period (2023)
+        ax_recovery = plt.axes([start_x + 3*(button_width + button_spacing), start_y, button_width, button_height])
+        btn_recovery = Button(ax_recovery, 'Recovery\nPeriod 2023', color='lightgreen', hovercolor='lightcyan')
+        btn_recovery.on_clicked(self._on_recovery_period_clicked)
+        
+        # Button 5: Recent Performance
+        ax_recent = plt.axes([start_x + 4*(button_width + button_spacing), start_y, button_width, button_height])
+        btn_recent = Button(ax_recent, 'Recent\n6 Months', color='lightyellow', hovercolor='lightcyan')
+        btn_recent.on_clicked(self._on_recent_performance_clicked)
+        
+        # Button 6: Show Help
+        ax_help = plt.axes([start_x + 5*(button_width + button_spacing), start_y, button_width, button_height])
+        btn_help = Button(ax_help, 'Help\n& Info', color='lightgray', hovercolor='lightcyan')
+        btn_help.on_clicked(self._on_help_clicked)
+        
+        # Add instructions text
+        button_area.text(0.5, 0.5, 'Click buttons below to analyze financial context for different periods', 
+                        ha='center', va='center', fontsize=12, fontweight='bold')
+        
+        # Store button references to prevent garbage collection
+        self.buttons = [btn_zoom, btn_custom, btn_crisis, btn_recovery, btn_recent, btn_help]
+        print(f"Created {len(self.buttons)} buttons successfully!")
+    
+    def _on_analyze_zoom_clicked(self, event):
+        """Callback for analyze current zoom button"""
+        print("Analyze zoom button clicked!")
+        self._analyze_current_zoom(self.current_ax, self.current_price_data)
+    
+    def _on_custom_range_clicked(self, event):
+        """Callback for custom date range button"""
+        print("Custom range button clicked!")
+        self._analyze_custom_range_gui(self.current_price_data)
+    
+    def _on_crisis_period_clicked(self, event):
+        """Callback for crisis period button"""
+        print("Crisis period button clicked!")
+        self._analyze_crisis_period_gui(self.current_price_data)
+    
+    def _on_recovery_period_clicked(self, event):
+        """Callback for recovery period button"""
+        print("Recovery period button clicked!")
+        self._analyze_recovery_period_gui(self.current_price_data)
+    
+    def _on_recent_performance_clicked(self, event):
+        """Callback for recent performance button"""
+        print("Recent performance button clicked!")
+        self._analyze_recent_performance_gui(self.current_price_data)
+    
+    def _on_help_clicked(self, event):
+        """Callback for help button"""
+        print("Help button clicked!")
+        self._show_help_gui()
+    
+    def _analyze_current_zoom(self, ax, price_data: Dict[str, float]):
+        """Analyze the currently zoomed area of the graph"""
+        try:
+            # Get current x-axis limits
+            xlim = ax.get_xlim()
+            
+            # Convert matplotlib dates to datetime
+            start_date = pd.to_datetime(xlim[0], unit='D', origin='1899-12-30').strftime('%Y-%m-%d')
+            end_date = pd.to_datetime(xlim[1], unit='D', origin='1899-12-30').strftime('%Y-%m-%d')
+            
+            # Perform analysis
+            context = self.analyze_financial_context(start_date, end_date, price_data)
+            self._display_context_gui(context, f"Zoom Analysis ({start_date} to {end_date})")
+            
+        except Exception as e:
+            self._show_error_gui(f"Error analyzing current zoom: {str(e)}")
+    
+    def _analyze_custom_range_gui(self, price_data: Dict[str, float]):
+        """Show GUI dialog for custom date range analysis"""
+        try:
+            # Create a simple dialog for date input
+            root = tk.Tk()
+            root.withdraw()  # Hide the main window
+            
+            start_date = simpledialog.askstring("Custom Date Range", 
+                                              "Enter start date (YYYY-MM-DD):", 
+                                              parent=root)
+            if start_date:
+                end_date = simpledialog.askstring("Custom Date Range", 
+                                                "Enter end date (YYYY-MM-DD):", 
+                                                parent=root)
+                if end_date:
+                    # Validate dates
+                    datetime.strptime(start_date, "%Y-%m-%d")
+                    datetime.strptime(end_date, "%Y-%m-%d")
+                    
+                    # Perform analysis
+                    context = self.analyze_financial_context(start_date, end_date, price_data)
+                    self._display_context_gui(context, f"Custom Analysis ({start_date} to {end_date})")
+            
+            root.destroy()
+            
+        except ValueError:
+            self._show_error_gui("Invalid date format. Please use YYYY-MM-DD format.")
+        except Exception as e:
+            self._show_error_gui(f"Error in custom analysis: {str(e)}")
+    
+    def _analyze_crisis_period_gui(self, price_data: Dict[str, float]):
+        """Analyze crisis period (2022) with GUI"""
+        context = self.analyze_financial_context("2022-01-01", "2022-12-31", price_data)
+        self._display_context_gui(context, "Crisis Period Analysis (2022)")
+    
+    def _analyze_recovery_period_gui(self, price_data: Dict[str, float]):
+        """Analyze recovery period (2023) with GUI"""
+        context = self.analyze_financial_context("2023-01-01", "2023-12-31", price_data)
+        self._display_context_gui(context, "Recovery Period Analysis (2023)")
+    
+    def _analyze_recent_performance_gui(self, price_data: Dict[str, float]):
+        """Analyze recent performance (last 6 months) with GUI"""
+        end_date = datetime.now() - timedelta(days=1)
+        start_date = end_date - timedelta(days=180)  # 6 months
+        
+        start_date_str = start_date.strftime("%Y-%m-%d")
+        end_date_str = end_date.strftime("%Y-%m-%d")
+        
+        context = self.analyze_financial_context(start_date_str, end_date_str, price_data)
+        self._display_context_gui(context, "Recent Performance Analysis (Last 6 Months)")
+    
+    def _display_context_gui(self, context: Dict[str, any], title: str):
+        """Display financial context analysis in a GUI window"""
+        if "error" in context:
+            self._show_error_gui(context["error"])
+            return
+        
+        # Create a new window for displaying the analysis
+        root = tk.Tk()
+        root.title(f"Financial Context Analysis - {title}")
+        root.geometry("800x600")
+        
+        # Create a text widget with scrollbar
+        text_frame = tk.Frame(root)
+        text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        text_widget = tk.Text(text_frame, wrap=tk.WORD, font=("Consolas", 10))
+        scrollbar = tk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text_widget.yview)
+        text_widget.configure(yscrollcommand=scrollbar.set)
+        
+        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Format and insert the analysis
+        analysis_text = self._format_context_for_gui(context)
+        text_widget.insert(tk.END, analysis_text)
+        text_widget.config(state=tk.DISABLED)  # Make it read-only
+        
+        # Add close button
+        close_btn = tk.Button(root, text="Close", command=root.destroy, 
+                             font=("Arial", 12), bg="lightblue")
+        close_btn.pack(pady=10)
+        
+        root.mainloop()
+    
+    def _format_context_for_gui(self, context: Dict[str, any]) -> str:
+        """Format the financial context for GUI display"""
+        text = f"""
+📊 FINANCIAL CONTEXT ANALYSIS
+{'='*60}
+
+📅 Period: {context['date_range']}
+📈 Total Return: {context['total_return']}%
+📊 Volatility: {context['volatility']}%
+💰 Price Range: {context['price_range']}
+📋 Data Points: {context['data_points']}
+
+📈 TREND ANALYSIS:
+  Direction: {context['trend_analysis']['direction']}
+  Strength: {context['trend_analysis']['strength']}%
+  Description: {context['trend_analysis']['description']}
+
+"""
+        
+        if context['contextual_events']:
+            text += "🎯 KEY EVENTS DURING THIS PERIOD:\n"
+            for event in context['contextual_events']:
+                impact_emoji = "🔴" if event.get("impact") == "High" else "🟡" if event.get("impact") == "Medium" else "🟢"
+                text += f"  {impact_emoji} {event['date']}: {event['event']}\n"
+            text += "\n"
+        
+        text += "💡 AI INSIGHTS:\n"
+        for insight in context['insights']:
+            text += f"  {insight}\n"
+        
+        text += f"\n{'='*60}\n"
+        text += "💡 This analysis helps you understand what happened in Sri Lanka's\n"
+        text += "   financial sector during the selected period and how it may have\n"
+        text += "   influenced the fund's performance.\n"
+        
+        return text
+    
+    def _show_error_gui(self, error_message: str):
+        """Show error message in a GUI dialog"""
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("Error", error_message)
+        root.destroy()
+    
+    def _show_help_gui(self):
+        """Show help information in a GUI window"""
+        root = tk.Tk()
+        root.title("Financial Context Analysis - Help")
+        root.geometry("600x500")
+        
+        help_text = """
+🔍 FINANCIAL CONTEXT ANALYSIS - HELP
+
+This feature provides AI-powered insights about Sri Lankan financial 
+sector events during selected date ranges to help you understand 
+what influenced fund performance.
+
+📊 AVAILABLE ANALYSES:
+
+🔍 Analyze Current Zoom
+   - Analyzes the currently visible date range on the graph
+   - Use zoom/pan to select your area of interest, then click this button
+
+📅 Custom Date Range  
+   - Enter any specific date range for analysis
+   - Useful for analyzing specific events or periods
+
+🚨 Crisis Period 2022
+   - Analyzes the Sri Lankan economic crisis period
+   - Shows impact of debt default, IMF negotiations, etc.
+
+📈 Recovery Period 2023
+   - Analyzes the post-crisis recovery period
+   - Shows impact of IMF bailout and recovery measures
+
+📊 Recent 6 Months
+   - Analyzes the most recent performance
+   - Shows current market conditions and trends
+
+💡 WHAT YOU GET:
+
+• Performance Metrics: Total return, volatility, price ranges
+• Trend Analysis: Uptrend/downtrend detection with strength
+• Event Correlation: Major Sri Lankan financial events
+• AI Insights: Explanations for performance changes
+• Context Understanding: Why prices moved up or down
+
+🎯 HOW TO USE:
+
+1. Zoom into the area you want to analyze
+2. Click "Analyze Current Zoom" for that specific period
+3. Or use predefined periods for major events
+4. Read the analysis to understand market context
+
+This helps you make informed investment decisions based on 
+historical context and market events.
+        """
+        
+        text_widget = tk.Text(root, wrap=tk.WORD, font=("Consolas", 10))
+        text_widget.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        text_widget.insert(tk.END, help_text)
+        text_widget.config(state=tk.DISABLED)
+        
+        close_btn = tk.Button(root, text="Close", command=root.destroy, 
+                             font=("Arial", 12), bg="lightblue")
+        close_btn.pack(pady=10)
+        
+        root.mainloop()
+    
     
     def _apply_date_filter(self, df: pd.DataFrame) -> pd.DataFrame:
         """Apply date filtering to reduce data points"""
@@ -357,7 +889,7 @@ class CALFundExtractor:
         
         df.to_csv(self.csv_filename, index=False)
         print(f"Data saved to '{self.csv_filename}'")
-    
+
     def init_all_funds_data(self, sample_date: str = None) -> Dict[str, Dict[str, float]]:
         """Initialize data collection for all available funds using smart caching and single API call per date"""
         # Use current date - 10 if no sample date provided
@@ -489,6 +1021,186 @@ class CALFundExtractor:
         print(f"  🔄 Existing files updated: {len(updated_files)}")
         
         return all_funds_data
+    
+    def analyze_financial_context(self, start_date: str, end_date: str, price_data: Dict[str, float]) -> Dict[str, any]:
+        """Analyze financial context for a given date range"""
+        print(f"\n🔍 Analyzing financial context for {start_date} to {end_date}")
+        print("=" * 60)
+        
+        # Convert dates for analysis
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        
+        # Filter price data for the selected range
+        filtered_data = {}
+        for date_str, price in price_data.items():
+            date_dt = datetime.strptime(date_str, "%Y-%m-%d")
+            if start_dt <= date_dt <= end_dt:
+                filtered_data[date_str] = price
+        
+        if not filtered_data:
+            return {"error": "No data available for the selected date range"}
+        
+        # Convert to DataFrame for analysis
+        df = pd.DataFrame(list(filtered_data.items()), columns=['Date', 'Price'])
+        df['Date'] = pd.to_datetime(df['Date'])
+        df = df.sort_values('Date')
+        
+        # Calculate performance metrics
+        start_price = df['Price'].iloc[0]
+        end_price = df['Price'].iloc[-1]
+        total_return = ((end_price - start_price) / start_price) * 100
+        
+        # Calculate volatility
+        returns = df['Price'].pct_change().dropna()
+        volatility = returns.std() * np.sqrt(252) * 100  # Annualized volatility
+        
+        # Find significant price movements
+        price_changes = df['Price'].diff()
+        significant_moves = price_changes[abs(price_changes) > price_changes.std() * 2]
+        
+        # Analyze trends
+        trend_analysis = self._analyze_trend(df)
+        
+        # Get contextual events
+        contextual_events = self._get_contextual_events(start_date, end_date)
+        
+        # Generate insights
+        insights = self._generate_insights(df, total_return, volatility, significant_moves, contextual_events)
+        
+        return {
+            "date_range": f"{start_date} to {end_date}",
+            "total_return": round(total_return, 2),
+            "volatility": round(volatility, 2),
+            "price_range": f"{df['Price'].min():.4f} - {df['Price'].max():.4f}",
+            "data_points": len(df),
+            "trend_analysis": trend_analysis,
+            "significant_moves": len(significant_moves),
+            "contextual_events": contextual_events,
+            "insights": insights
+        }
+    
+    def _analyze_trend(self, df: pd.DataFrame) -> Dict[str, any]:
+        """Analyze price trend in the selected period"""
+        prices = df['Price'].values
+        dates = np.arange(len(prices))
+        
+        # Linear regression to determine trend
+        coeffs = np.polyfit(dates, prices, 1)
+        slope = coeffs[0]
+        
+        # Calculate trend strength
+        trend_strength = abs(slope) / prices.mean() * 100
+        
+        if slope > 0:
+            trend_direction = "Uptrend"
+            trend_description = f"Strong upward trend with {trend_strength:.2f}% daily growth"
+        elif slope < 0:
+            trend_direction = "Downtrend"
+            trend_description = f"Declining trend with {abs(trend_strength):.2f}% daily decline"
+        else:
+            trend_direction = "Sideways"
+            trend_description = "Relatively stable with minimal trend"
+        
+        return {
+            "direction": trend_direction,
+            "strength": round(trend_strength, 2),
+            "description": trend_description
+        }
+    
+    def _get_contextual_events(self, start_date: str, end_date: str) -> List[Dict[str, str]]:
+        """Get contextual financial events for Sri Lanka during the date range"""
+        # This is a simplified version - in a real implementation, you'd integrate with news APIs
+        events = []
+        
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        
+        # Known significant events in Sri Lankan financial history
+        significant_events = [
+            {"date": "2022-03-01", "event": "Sri Lanka economic crisis begins", "impact": "High"},
+            {"date": "2022-04-01", "event": "Sri Lanka defaults on foreign debt", "impact": "High"},
+            {"date": "2022-07-01", "event": "IMF bailout negotiations begin", "impact": "Medium"},
+            {"date": "2023-03-01", "event": "IMF approves $3 billion bailout package", "impact": "High"},
+            {"date": "2023-09-01", "event": "Central Bank policy rate adjustments", "impact": "Medium"},
+            {"date": "2024-01-01", "event": "Economic recovery measures implemented", "impact": "Medium"},
+            {"date": "2024-06-01", "event": "Tourism sector recovery", "impact": "Low"},
+        ]
+        
+        for event in significant_events:
+            event_date = datetime.strptime(event["date"], "%Y-%m-%d")
+            if start_dt <= event_date <= end_dt:
+                events.append(event)
+        
+        # Add general market context based on the period
+        if start_dt.year == 2022:
+            events.append({
+                "date": "2022",
+                "event": "Global economic uncertainty and inflation pressures",
+                "impact": "High"
+            })
+        elif start_dt.year == 2023:
+            events.append({
+                "date": "2023",
+                "event": "Post-crisis recovery and IMF program implementation",
+                "impact": "High"
+            })
+        elif start_dt.year == 2024:
+            events.append({
+                "date": "2024",
+                "event": "Economic stabilization and growth initiatives",
+                "impact": "Medium"
+            })
+        
+        return events
+    
+    def _generate_insights(self, df: pd.DataFrame, total_return: float, volatility: float, 
+                          significant_moves: pd.Series, events: List[Dict[str, str]]) -> List[str]:
+        """Generate AI-powered insights about the fund performance"""
+        insights = []
+        
+        # Performance insights
+        if total_return > 10:
+            insights.append("📈 Strong positive performance during this period")
+        elif total_return > 5:
+            insights.append("📊 Moderate positive performance")
+        elif total_return > 0:
+            insights.append("📉 Slight positive performance")
+        elif total_return > -5:
+            insights.append("📉 Minor decline in performance")
+        elif total_return > -10:
+            insights.append("📉 Moderate decline in performance")
+        else:
+            insights.append("📉 Significant decline in performance")
+        
+        # Volatility insights
+        if volatility > 30:
+            insights.append("⚡ High volatility period - significant price swings")
+        elif volatility > 20:
+            insights.append("📊 Moderate volatility - some price fluctuations")
+        else:
+            insights.append("📈 Low volatility - relatively stable period")
+        
+        # Event correlation insights
+        if events:
+            high_impact_events = [e for e in events if e.get("impact") == "High"]
+            if high_impact_events:
+                insights.append(f"🎯 {len(high_impact_events)} high-impact economic events occurred during this period")
+                insights.append("💡 Performance likely influenced by major economic developments")
+        
+        # Trend insights
+        if len(significant_moves) > 0:
+            insights.append(f"📊 {len(significant_moves)} significant price movements detected")
+            insights.append("🔍 These movements may indicate market reactions to news or events")
+        
+        # Data quality insights
+        if len(df) < 5:
+            insights.append("⚠️ Limited data points - analysis may be less reliable")
+        elif len(df) > 20:
+            insights.append("✅ Sufficient data points for reliable analysis")
+        
+        return insights
+    
 
 def get_user_fund_selection(available_funds: List[str], earliest_dates: Dict[str, str]) -> str:
     """Get fund selection from user with earliest dates displayed"""

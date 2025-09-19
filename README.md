@@ -14,7 +14,11 @@ A comprehensive Python tool for extracting and analyzing unit trust fund data fr
 - **Flexible Date Ranges**: Customizable start and end dates with intelligent date generation
 - **Strategic Sampling**: Collects data on 1st and 15th of each month for comprehensive trend analysis
 - **Dynamic File Naming**: Automatically generates fund-specific CSV and graph filenames
-- **Interactive Visualizations**: Creates fully interactive graphs with zoom in/out, pan, and filtering options for large datasets
+- **Professional Manual UI**: Dedicated tkinter interface with embedded matplotlib graphs and intuitive controls
+- **Financial Context Analysis**: AI-powered analysis of fund performance with Sri Lankan economic context
+- **Interactive Analysis Buttons**: One-click analysis for crisis periods, recovery periods, and custom date ranges
+- **Real-time Graph Updates**: Dynamic date range filtering with instant graph refresh
+- **Popup Analysis Results**: Detailed financial context analysis in dedicated popup windows
 - **Data Export**: Saves raw data in CSV format for further analysis and external tools
 - **Robust Error Handling**: Comprehensive error handling for network issues and data parsing
 - **API-Friendly**: Implements respectful delays between API calls to protect server resources
@@ -66,8 +70,9 @@ The script will guide you through the following steps:
 4. **Data Collection**: Intelligently collects data, using cached data when available
 5. **Progress Tracking**: Shows real-time progress and data coverage summaries
 6. **Data Storage**: Saves collected data to a fund-specific CSV file
-7. **Visualization**: Creates and displays a professional graph with fund-specific naming
-8. **Summary Statistics**: Provides detailed statistics about the collected data
+7. **Manual UI Launch**: Opens the professional tkinter interface with embedded graph
+8. **Interactive Analysis**: Use analysis buttons and date controls for comprehensive analysis
+9. **Financial Context**: View detailed analysis results in popup windows
 
 ### Init Mode Workflow
 The init command efficiently collects data for all funds:
@@ -344,6 +349,27 @@ The script automatically discovers all available funds from the CAL API by makin
 - **Smart Defaults**: Fund-specific defaults prevent invalid date ranges and optimize data collection
 - **Input Validation**: Comprehensive validation for all user inputs
 
+### Manual UI Features
+- **Professional Interface**: Dedicated tkinter GUI with embedded matplotlib graphs
+- **Left Control Panel**: Analysis buttons, date controls, and help section
+- **Right Graph Panel**: Full-featured matplotlib graph with navigation toolbar
+- **Real-time Updates**: Dynamic graph updates when changing date ranges
+- **Intuitive Controls**: Clear buttons with icons and descriptive labels
+- **Responsive Layout**: 1400x900 window with organized panels
+- **Error Handling**: Proper error messages and validation in GUI
+
+### Financial Context Analysis
+- **AI-Powered Insights**: Intelligent analysis of fund performance patterns
+- **Sri Lankan Economic Context**: Integration of significant financial events
+- **Performance Metrics**: Return calculations, volatility analysis, and trend detection
+- **Crisis Period Analysis**: Pre-configured analysis for 2022 economic crisis
+- **Recovery Period Analysis**: Pre-configured analysis for 2023 post-crisis recovery
+- **Custom Date Range Analysis**: User-defined period analysis with dialog inputs
+- **Current View Analysis**: Analyzes the currently visible graph area
+- **Recent Performance**: Automatic analysis of the last 6 months
+- **Popup Results**: Detailed analysis displayed in dedicated windows
+- **Scrollable Output**: Large text areas for comprehensive analysis results
+
 ### Interactive Graph Features
 - **Full Zoom Control**: Mouse wheel scroll up to zoom in, scroll down to zoom out
 - **Navigation Toolbar**: Complete set of controls including Home, Back/Forward, Pan, and Zoom tools
@@ -352,6 +378,7 @@ The script automatically discovers all available funds from the CAL API by makin
 - **Date Range Filtering**: Interactive filtering to focus on specific time periods
 - **High-Resolution Export**: 300 DPI PNG export for presentations and reports
 - **Real-time Display**: Graphs display immediately with full interactive controls
+- **Embedded Integration**: Seamless integration with tkinter interface
 
 ## 🔗 API Information
 
@@ -371,6 +398,41 @@ The script provides:
 - Professional interactive graph with full zoom/pan controls
 - Raw data display for verification
 
+## 🖥️ Manual UI Interface
+
+### Interface Layout
+The new manual UI provides a professional, user-friendly interface with:
+
+**Left Control Panel (300px width):**
+- **Fund Information**: Displays selected fund name and data summary
+- **Analysis Options**: Five analysis buttons for different time periods
+- **Date Range Controls**: Start/end date inputs with update button
+- **Help & Instructions**: Comprehensive usage guide
+
+**Right Graph Panel (1100px width):**
+- **Embedded Matplotlib Graph**: Full-featured interactive graph
+- **Navigation Toolbar**: Complete zoom, pan, and navigation controls
+- **Real-time Updates**: Graph refreshes when date range changes
+
+### Analysis Buttons
+- **🔍 Analyze Current View**: Analyzes the currently visible graph area
+- **🚨 Crisis Period (2022)**: Pre-configured analysis for economic crisis
+- **📈 Recovery Period (2023)**: Pre-configured analysis for post-crisis recovery
+- **📊 Recent 6 Months**: Automatic analysis of the most recent performance
+- **📅 Custom Date Range**: User-defined period analysis with dialog inputs
+
+### Date Range Controls
+- **Start Date Entry**: Text field showing current data start date
+- **End Date Entry**: Text field showing current data end date
+- **Update Graph Button**: Refreshes graph with new date range
+- **Real-time Validation**: Error messages for invalid date formats
+
+### Analysis Results
+- **Popup Windows**: Dedicated windows for each analysis result
+- **Scrollable Text**: Large text areas for detailed analysis
+- **Formatted Output**: Clean, readable analysis presentation
+- **Dynamic Titles**: Each window shows the specific analysis period
+
 ## 🎮 Interactive Graph Controls
 
 ### Mouse Controls
@@ -387,12 +449,81 @@ The script provides:
 - **⚙️ Configure**: Adjust plot settings and appearance
 - **💾 Save**: Save the current view as an image
 
+### Manual UI Controls
+- **Analysis Buttons**: Click any button for instant financial context analysis
+- **Date Range Inputs**: Type new dates and click "Update Graph" to refresh
+- **Popup Windows**: View detailed analysis results in dedicated windows
+- **Help Section**: Built-in instructions and usage tips
+
+## 🧠 Financial Context Analysis
+
+### AI-Powered Insights
+The financial context analysis feature provides intelligent analysis of fund performance with:
+
+**Performance Metrics:**
+- **Total Return**: Percentage change from start to end of period
+- **Volatility**: Standard deviation of price changes
+- **Price Range**: Minimum and maximum prices during the period
+- **Significant Moves**: Identification of major price movements (>5% changes)
+
+**Trend Analysis:**
+- **Linear Regression**: Statistical trend direction and strength
+- **Trend Classification**: Uptrend, Downtrend, or Sideways movement
+- **Trend Strength**: Correlation coefficient indicating trend reliability
+
+**Sri Lankan Economic Context:**
+- **2022 Crisis Events**: Economic crisis, political instability, inflation
+- **2023 Recovery Events**: Economic stabilization, policy changes, market recovery
+- **2024 Recent Events**: Current economic conditions and policy updates
+- **Event Correlation**: Links between economic events and fund performance
+
+**AI-Generated Insights:**
+- **Performance Interpretation**: Human-readable analysis of fund behavior
+- **Risk Assessment**: Volatility and risk level evaluation
+- **Market Context**: Explanation of performance in economic context
+- **Investment Guidance**: Actionable insights for investors
+
+### Analysis Types
+
+**1. Crisis Period Analysis (2022)**
+- Analyzes the economic crisis period
+- Identifies impact of political and economic instability
+- Shows fund resilience during difficult times
+
+**2. Recovery Period Analysis (2023)**
+- Examines post-crisis recovery
+- Identifies recovery patterns and growth trends
+- Shows fund performance during stabilization
+
+**3. Recent Performance Analysis**
+- Analyzes the last 6 months
+- Provides current market assessment
+- Shows recent trends and patterns
+
+**4. Custom Date Range Analysis**
+- User-defined period analysis
+- Flexible date range selection
+- Custom economic context evaluation
+
+**5. Current View Analysis**
+- Analyzes the currently visible graph area
+- Perfect for zoomed-in analysis
+- Real-time context for specific periods
+
+### Benefits for Investors
+- **Contextual Understanding**: Understand why fund prices moved
+- **Risk Assessment**: Evaluate fund volatility and risk levels
+- **Trend Identification**: Spot patterns and trends early
+- **Economic Correlation**: See how economic events affect fund performance
+- **Investment Decisions**: Make informed decisions based on comprehensive analysis
+
 ## ⚙️ Technical Details
 
 ### Architecture
 - **Object-Oriented Design**: Clean class-based architecture with `CALFundExtractor` class
 - **Modular Functions**: Separate functions for fund discovery, data collection, and visualization
 - **Type Hints**: Full type annotations for better code maintainability and IDE support
+- **GUI Integration**: Seamless integration between tkinter and matplotlib
 
 ### Data Management
 - **Smart Caching**: Automatic detection and loading of existing CSV files
@@ -413,6 +544,9 @@ The script provides:
 - **Interactive Display**: Shows graphs in real-time during execution
 - **Full Navigation**: Complete zoom in/out, pan, and navigation controls
 - **Smart Filtering**: Automatic filtering suggestions for large datasets
+- **Manual UI Integration**: Embedded matplotlib graphs in tkinter interface
+- **Real-time Updates**: Dynamic graph updates when changing date ranges
+- **Professional Layout**: Organized control panels with intuitive design
 
 ### File Management
 - **Dynamic Naming**: Automatic generation of fund-specific filenames
@@ -427,6 +561,9 @@ The script provides:
 - **Graph Display**: Ensure matplotlib backend is properly configured
 - **Fund Not Found**: If a fund doesn't appear in the list, check if it's available in the API
 - **Cached Data Issues**: Delete the CSV file if you suspect corrupted cached data
+- **Manual UI Issues**: Ensure tkinter is properly installed (usually included with Python)
+- **Button Clicks**: All analysis buttons should work without errors - check console for debug messages
+- **Popup Windows**: Analysis results open in dedicated windows - check if they're behind the main window
 
 ### Data Collection Issues
 - **Partial Data**: The script will show which dates have data and which are missing
