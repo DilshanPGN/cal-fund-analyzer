@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
 class CALFundExtractor:
-    def __init__(self, fund_name: str = None, start_date: str = None, end_date: str = None):
+    def __init__(self, fund_name: str = None, start_date: str = None, end_date: str = None, api_delay: float = None):
         self.base_url = "https://cal.lk/wp-admin/admin-ajax.php"
         self.target_fund_name = fund_name or "Capital Alliance Quantitative Equity Fund"
         
@@ -18,6 +18,9 @@ class CALFundExtractor:
         yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
         self.start_date = start_date or "2013-01-01"
         self.end_date = end_date or yesterday
+        
+        # Set default API delay: 0.5 seconds
+        self.api_delay = api_delay or 0.5
         
         self.csv_filename = f'cal_fund_data_{self.target_fund_name.replace(" ", "_").replace("/", "_")}.csv'
         
@@ -183,8 +186,8 @@ class CALFundExtractor:
                     skipped_dates += 1
                     print(f"    ⚠ Failed to fetch data - skipping date")
                 
-                # Add small delay to be respectful to the API
-                time.sleep(0.5)
+                # Add configurable delay to be respectful to the API
+                time.sleep(self.api_delay)
             
             print(f"\nFetch Summary:")
             print(f"  ✓ Successfully fetched: {successful_fetches} dates")
@@ -232,8 +235,11 @@ class CALFundExtractor:
         # Format x-axis dates
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
         
-        # Add zoom and pan functionality
+        # Enable interactive navigation toolbar
         plt.tight_layout()
+        
+        # Ensure the navigation toolbar is enabled for zoom/pan functionality
+        fig.canvas.manager.toolbar.update()
         
         # Save the graph
         graph_filename = f'cal_fund_price_trend_{self.target_fund_name.replace(" ", "_").replace("/", "_")}.png'
@@ -252,9 +258,14 @@ class CALFundExtractor:
         
         # Interactive instructions
         print(f"\n📊 Interactive Graph Features:")
-        print(f"  • Use mouse wheel to zoom in/out")
+        print(f"  • Mouse wheel: Scroll UP to zoom IN, scroll DOWN to zoom OUT")
         print(f"  • Click and drag to pan around the graph")
-        print(f"  • Use toolbar buttons for additional controls")
+        print(f"  • Toolbar buttons:")
+        print(f"    - 🏠 Home: Reset to original view (zoom out completely)")
+        print(f"    - ⬅️ Back: Go to previous zoom level")
+        print(f"    - ➡️ Forward: Go to next zoom level")
+        print(f"    - ✋ Pan: Move around when zoomed")
+        print(f"    - 🔍 Zoom: Click and drag to zoom into area")
         print(f"  • Close the graph window to continue")
     
     def _apply_date_filter(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -345,6 +356,32 @@ def get_user_date_input(prompt: str, default: str) -> str:
         except ValueError:
             print("Invalid date format. Please use YYYY-MM-DD format (e.g., 2024-06-01)")
 
+def get_user_api_delay_input(prompt: str, default: float) -> float:
+    """Get API delay input from user with validation"""
+    while True:
+        user_input = input(f"{prompt} (default: {default} seconds): ").strip()
+        if not user_input:
+            return default
+        
+        try:
+            delay = float(user_input)
+            if delay < 0:
+                print("Delay must be 0 or greater")
+                continue
+            if delay == 0:
+                print("Warning: No delay may overload the server and cause rate limiting")
+                confirm = input("Continue with no delay? (y/n): ").strip().lower()
+                if confirm not in ['y', 'yes']:
+                    continue
+            elif delay > 10:
+                print("Warning: Delay greater than 10 seconds may significantly slow down data collection")
+                confirm = input("Continue anyway? (y/n): ").strip().lower()
+                if confirm not in ['y', 'yes']:
+                    continue
+            return delay
+        except ValueError:
+            print("Invalid delay format. Please enter a number (e.g., 0, 0.5, 1.0, 2)")
+
 def main():
     """Main function to run the fund data extraction and visualization"""
     print("CAL Fund Data Extractor")
@@ -365,12 +402,16 @@ def main():
     start_date = get_user_date_input("Enter start date (YYYY-MM-DD)", "2013-01-01")
     end_date = get_user_date_input("Enter end date (YYYY-MM-DD)", yesterday)
     
+    # Get API delay from user
+    api_delay = get_user_api_delay_input("Enter API delay between requests", 0.5)
+    
     # Create the main extractor with user selections
-    extractor = CALFundExtractor(selected_fund, start_date, end_date)
+    extractor = CALFundExtractor(selected_fund, start_date, end_date, api_delay)
     
     print("\n" + "=" * 50)
     print(f"Target Fund: {extractor.target_fund_name}")
     print(f"Date Range: {extractor.start_date} - {extractor.end_date} (1st & 15th of each month)")
+    print(f"API Delay: {extractor.api_delay} seconds between requests")
     print(f"Data will be saved to: {extractor.csv_filename}")
     print("=" * 50)
     

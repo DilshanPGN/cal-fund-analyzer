@@ -10,13 +10,14 @@ A comprehensive Python tool for extracting and analyzing unit trust fund data fr
 - **Flexible Date Ranges**: Customizable start and end dates with intelligent date generation
 - **Strategic Sampling**: Collects data on 1st and 15th of each month for comprehensive trend analysis
 - **Dynamic File Naming**: Automatically generates fund-specific CSV and graph filenames
-- **Interactive Visualizations**: Creates expandable, zoomable graphs with filtering options for large datasets
+- **Interactive Visualizations**: Creates fully interactive graphs with zoom in/out, pan, and filtering options for large datasets
 - **Data Export**: Saves raw data in CSV format for further analysis and external tools
 - **Robust Error Handling**: Comprehensive error handling for network issues and data parsing
 - **API-Friendly**: Implements respectful delays between API calls to protect server resources
 - **Progress Tracking**: Real-time progress updates and data coverage summaries
 - **Smart Data Handling**: Automatically skips dates with no data instead of showing errors
 - **Large Dataset Management**: Automatic filtering suggestions for datasets with 100+ data points
+- **Smart Data Filtering**: Only loads cached data within the current date range to avoid showing old data
 
 ## 📋 Prerequisites
 
@@ -127,11 +128,13 @@ The script automatically discovers all available funds from the CAL API by makin
 - **Input Validation**: Comprehensive validation for all user inputs
 
 ### Interactive Graph Features
-- **Zoom and Pan**: Use mouse wheel to zoom in/out and drag to pan around the graph
+- **Full Zoom Control**: Mouse wheel scroll up to zoom in, scroll down to zoom out
+- **Navigation Toolbar**: Complete set of controls including Home, Back/Forward, Pan, and Zoom tools
+- **Pan Functionality**: Click and drag to move around when zoomed in
 - **Large Dataset Handling**: Automatic filtering suggestions when datasets exceed 100 data points
 - **Date Range Filtering**: Interactive filtering to focus on specific time periods
 - **High-Resolution Export**: 300 DPI PNG export for presentations and reports
-- **Real-time Display**: Graphs display immediately with interactive controls
+- **Real-time Display**: Graphs display immediately with full interactive controls
 
 ## 🔗 API Information
 
@@ -148,8 +151,24 @@ The script automatically discovers all available funds from the CAL API by makin
 The script provides:
 - Real-time progress updates during data collection
 - Summary statistics including total data points, date range, price range, and average price
-- Professional graph with markers, grid, and proper formatting
+- Professional interactive graph with full zoom/pan controls
 - Raw data display for verification
+
+## 🎮 Interactive Graph Controls
+
+### Mouse Controls
+- **Scroll Up**: Zoom in to see more detail
+- **Scroll Down**: Zoom out to see broader view
+- **Click & Drag**: Pan around when zoomed in
+
+### Toolbar Controls
+- **🏠 Home**: Reset to original full view (instant zoom out)
+- **⬅️ Back**: Go to previous zoom level
+- **➡️ Forward**: Go to next zoom level
+- **✋ Pan**: Enable pan mode for moving around
+- **🔍 Zoom**: Enable zoom mode for selecting areas to zoom into
+- **⚙️ Configure**: Adjust plot settings and appearance
+- **💾 Save**: Save the current view as an image
 
 ## ⚙️ Technical Details
 
@@ -175,6 +194,8 @@ The script provides:
 - **Dynamic Titles**: Fund-specific graph titles and filenames
 - **Export Options**: High-resolution PNG export (300 DPI) for presentations
 - **Interactive Display**: Shows graphs in real-time during execution
+- **Full Navigation**: Complete zoom in/out, pan, and navigation controls
+- **Smart Filtering**: Automatic filtering suggestions for large datasets
 
 ### File Management
 - **Dynamic Naming**: Automatic generation of fund-specific filenames
@@ -196,6 +217,7 @@ The script provides:
 - **API Rate Limiting**: If you get blocked, wait a few minutes before retrying
 - **Date Range Errors**: Ensure dates are in YYYY-MM-DD format and within API range
 - **Large Datasets**: For datasets with 100+ points, consider using the filtering option
+- **Old Data Display**: Cached data is automatically filtered to only show data within your current date range
 
 ### Getting Help
 If you encounter issues:
