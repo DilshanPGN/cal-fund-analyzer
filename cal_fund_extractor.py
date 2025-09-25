@@ -28,7 +28,7 @@ class CALFundExtractor:
         self.csv_filename = f'cal_fund_data_{self.target_fund_name.replace(" ", "_").replace("/", "_")}.csv'
         
     def generate_date_range(self) -> List[str]:
-        """Generate list of dates for 1st and 15th of each month within the specified date range"""
+        """Generate list of dates for 1st and 15th of each month within the specified date range, plus current date if not already included"""
         dates = []
         try:
             start_date = datetime.strptime(self.start_date, "%Y-%m-%d")
@@ -52,6 +52,12 @@ class CALFundExtractor:
                 current_date = current_date.replace(year=current_date.year + 1, month=1)
             else:
                 current_date = current_date.replace(month=current_date.month + 1)
+        
+        # Add the end date if it's not already in the list (for current date scenarios)
+        end_date_str = end_date.strftime("%Y-%m-%d")
+        if end_date_str not in dates:
+            dates.append(end_date_str)
+            print(f"Added current date {end_date_str} to fetch list")
         
         return dates
     
