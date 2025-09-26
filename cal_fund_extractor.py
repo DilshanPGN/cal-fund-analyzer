@@ -28,7 +28,7 @@ class CALFundExtractor:
         self.csv_filename = f'cal_fund_data_{self.target_fund_name.replace(" ", "_").replace("/", "_")}.csv'
         
     def generate_date_range(self) -> List[str]:
-        """Generate list of dates for 1st and 15th of each month within the specified date range"""
+        """Generate list of dates for 1st and 15th of each month within the specified date range, plus current date if not already included"""
         dates = []
         try:
             start_date = datetime.strptime(self.start_date, "%Y-%m-%d")
@@ -52,6 +52,12 @@ class CALFundExtractor:
                 current_date = current_date.replace(year=current_date.year + 1, month=1)
             else:
                 current_date = current_date.replace(month=current_date.month + 1)
+        
+        # Add the end date if it's not already in the list (for current date scenarios)
+        end_date_str = end_date.strftime("%Y-%m-%d")
+        if end_date_str not in dates:
+            dates.append(end_date_str)
+            print(f"Added current date {end_date_str} to fetch list")
         
         return dates
     
@@ -256,8 +262,20 @@ class CALFundExtractor:
         # Create main window
         self.root = tk.Tk()
         self.root.title(f"CAL Fund Analyzer - {self.target_fund_name}")
-        self.root.geometry("1400x900")
+        self.root.geometry("1600x1000")
         self.root.configure(bg='#f0f0f0')
+        self.root.minsize(1200, 800)  # Set minimum size
+        
+        # Position window on primary monitor
+        self._position_window_on_primary_monitor()
+        
+        # Add proper close handling
+        self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
+        
+        # Add keyboard shortcuts
+        self.root.bind('<Control-q>', lambda e: self._on_closing())
+        self.root.bind('<Escape>', lambda e: self._on_closing())
+        self.root.focus_set()  # Make sure window can receive keyboard events
         
         # Store data for analysis
         self.df = df
@@ -267,14 +285,36 @@ class CALFundExtractor:
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Create left panel for controls
-        left_panel = ttk.Frame(main_frame, width=300)
-        left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
-        left_panel.pack_propagate(False)
+        # Create left panel for controls with scrolling
+        left_frame = ttk.Frame(main_frame, width=350)
+        left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        left_frame.pack_propagate(False)
+        
+        # Create scrollable canvas for left panel
+        left_canvas = tk.Canvas(left_frame)
+        left_scrollbar = ttk.Scrollbar(left_frame, orient="vertical", command=left_canvas.yview)
+        left_panel = ttk.Frame(left_canvas)
+        
+        left_panel.bind(
+            "<Configure>",
+            lambda e: left_canvas.configure(scrollregion=left_canvas.bbox("all"))
+        )
+        
+        left_canvas.create_window((0, 0), window=left_panel, anchor="nw")
+        left_canvas.configure(yscrollcommand=left_scrollbar.set)
+        
+        # Pack left panel canvas and scrollbar
+        left_canvas.pack(side="left", fill="both", expand=True)
+        left_scrollbar.pack(side="right", fill="y")
         
         # Create right panel for graph
         right_panel = ttk.Frame(main_frame)
         right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        
+        # Bind mousewheel to left canvas for scrolling
+        def _on_left_mousewheel(event):
+            left_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        left_canvas.bind_all("<MouseWheel>", _on_left_mousewheel)
         
         # Add title
         title_label = ttk.Label(left_panel, text="Financial Context Analysis", 
@@ -300,11 +340,17 @@ class CALFundExtractor:
         # Add analysis buttons
         self._create_analysis_buttons(left_panel)
         
+        # Add refresh/update section
+        self._create_refresh_section(left_panel)
+        
         # Add date range controls
         self._create_date_controls(left_panel)
         
         # Add help section
         self._create_help_section(left_panel)
+        
+        # Add close button section
+        self._create_close_section(left_panel)
         
         # Create matplotlib graph
         self._create_matplotlib_graph(right_panel)
@@ -346,6 +392,165 @@ class CALFundExtractor:
                                    command=self._analyze_custom_range, **button_style)
         self.custom_btn.pack(pady=2)
     
+    def _create_refresh_section(self, parent):
+        """Create refresh/update section"""
+        # Refresh section frame
+        refresh_frame = ttk.LabelFrame(parent, text="Data Management", padding="10")
+        refresh_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        # Refresh data button
+        self.refresh_btn = ttk.Button(refresh_frame, text="🔄 Refresh Data", 
+                                     command=self._refresh_data, width=25)
+        self.refresh_btn.pack(pady=2)
+        
+        # Change fund button
+        self.change_fund_btn = ttk.Button(refresh_frame, text="📊 Change Fund", 
+                                         command=self._change_fund, width=25)
+        self.change_fund_btn.pack(pady=2)
+        
+        # Status label
+        self.status_label = ttk.Label(refresh_frame, text="", font=('Arial', 9))
+        self.status_label.pack(pady=(5, 0))
+    
+    def _refresh_data(self):
+        """Refresh data from API"""
+        try:
+            self.status_label.config(text="🔄 Refreshing data...")
+            self.root.update()
+            
+            # Update end date to current date
+            yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+            self.end_date = yesterday
+            
+            # Create new extractor with updated end date
+            extractor = CALFundExtractor(self.target_fund_name, self.start_date, self.end_date, self.api_delay)
+            
+            # Collect fresh data
+            new_price_data = extractor.collect_price_data()
+            
+            if new_price_data:
+                # Update the current data
+                self.price_data = new_price_data
+                
+                # Convert to DataFrame and update graph
+                df = pd.DataFrame(list(new_price_data.items()), columns=['Date', 'Price'])
+                df['Date'] = pd.to_datetime(df['Date'])
+                df = df.sort_values('Date')
+                self.df = df
+                
+                # Update the graph
+                self.line.set_data(self.df['Date'], self.df['Price'])
+                self.ax.relim()
+                self.ax.autoscale_view()
+                self.canvas.draw()
+                
+                # Update summary
+                summary_text = f"""Data Summary:
+• Total Points: {len(df)}
+• Date Range: {df['Date'].min().strftime('%Y-%m-%d')} to {df['Date'].max().strftime('%Y-%m-%d')}
+• Price Range: {df['Price'].min():.4f} to {df['Price'].max():.4f}
+• Average Price: {df['Price'].mean():.4f}"""
+                
+                # Update summary label (find and update it)
+                for widget in self.root.winfo_children():
+                    if isinstance(widget, ttk.Frame):
+                        for child in widget.winfo_children():
+                            if isinstance(child, ttk.Label) and "Data Summary:" in str(child.cget("text")):
+                                child.config(text=summary_text)
+                                break
+                
+                self.status_label.config(text=f"✅ Updated with {len(new_price_data)} data points")
+                messagebox.showinfo("Success", f"Data refreshed successfully!\nNew data points: {len(new_price_data)}")
+            else:
+                self.status_label.config(text="⚠️ No new data available")
+                messagebox.showwarning("Warning", "No new data was found")
+                
+        except Exception as e:
+            self.status_label.config(text="❌ Refresh failed")
+            messagebox.showerror("Error", f"Failed to refresh data:\n{e}")
+    
+    def _change_fund(self):
+        """Open fund selection dialog"""
+        try:
+            # Create a simple fund selection dialog
+            fund_window = tk.Toplevel(self.root)
+            fund_window.title("Change Fund")
+            fund_window.geometry("500x400")
+            fund_window.configure(bg='#f0f0f0')
+            fund_window.minsize(400, 300)
+            
+            # Position window on primary monitor
+            self._position_dialog_window_on_primary_monitor(fund_window, 500, 400)
+            
+            # Main frame
+            main_frame = ttk.Frame(fund_window)
+            main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+            
+            # Title
+            title_label = ttk.Label(main_frame, text="Select New Fund", 
+                                   font=('Arial', 14, 'bold'))
+            title_label.pack(pady=(0, 20))
+            
+            # Fund selection
+            ttk.Label(main_frame, text="Available Funds:").pack(anchor=tk.W)
+            
+            # Get available funds
+            temp_extractor = CALFundExtractor()
+            available_funds = temp_extractor.discover_available_funds()
+            
+            fund_var = tk.StringVar(value=self.target_fund_name)
+            fund_combo = ttk.Combobox(main_frame, textvariable=fund_var, 
+                                     values=available_funds, state="readonly", width=50)
+            fund_combo.pack(fill=tk.X, pady=(10, 20))
+            
+            # Buttons
+            button_frame = ttk.Frame(main_frame)
+            button_frame.pack(fill=tk.X)
+            
+            def apply_fund():
+                selected_fund = fund_var.get()
+                fund_window.destroy()
+                
+                # Update the current analysis with new fund
+                self.target_fund_name = selected_fund
+                self.csv_filename = f'cal_fund_data_{self.target_fund_name.replace(" ", "_").replace("/", "_")}.csv'
+                
+                # Refresh data for new fund
+                self._refresh_data()
+            
+            ttk.Button(button_frame, text="Apply", command=apply_fund).pack(side=tk.LEFT, padx=(0, 10))
+            ttk.Button(button_frame, text="Cancel", command=fund_window.destroy).pack(side=tk.LEFT)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open fund selection:\n{e}")
+    
+    def _position_dialog_window_on_primary_monitor(self, window, width, height):
+        """Position dialog window on primary monitor and center it"""
+        try:
+            # Get screen dimensions
+            screen_width = window.winfo_screenwidth()
+            screen_height = window.winfo_screenheight()
+            
+            # Calculate position to center the window
+            x = (screen_width - width) // 2
+            y = (screen_height - height) // 2
+            
+            # Ensure window is not positioned off-screen
+            x = max(0, x)
+            y = max(0, y)
+            
+            # Set window position
+            window.geometry(f"{width}x{height}+{x}+{y}")
+            
+            # Force window to appear on primary monitor
+            window.lift()
+            window.focus_force()
+            
+        except Exception as e:
+            print(f"Warning: Could not position dialog window optimally: {e}")
+            # Fallback to default centering
+            window.eval('tk::PlaceWindow . center')
+    
     def _create_date_controls(self, parent):
         """Create date range controls"""
         # Date controls frame
@@ -385,14 +590,117 @@ Analysis Features:
 • Use date controls to filter the graph
 • All analysis results open in popup windows
 
+Data Management:
+• Refresh Data: Get latest data from API
+• Change Fund: Switch to different fund
+• Use mouse wheel to scroll this panel
+
+Closing Application:
+• Click 'Close Application' button
+• Press Ctrl+Q or Escape key
+• Use the X button on window
+
 Tips:
 • Zoom into interesting periods first
 • Use 'Analyze Current View' for zoomed areas
-• Check crisis/recovery periods for context"""
+• Check crisis/recovery periods for context
+• Scroll this panel if content is cut off"""
         
         help_label = ttk.Label(help_frame, text=help_text, 
                               font=('Arial', 9), justify=tk.LEFT, wraplength=280)
         help_label.pack(fill=tk.BOTH, expand=True)
+    
+    def _create_close_section(self, parent):
+        """Create close button section"""
+        # Close section frame
+        close_frame = ttk.LabelFrame(parent, text="Close Application", padding="10")
+        close_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # Large close button
+        close_btn = ttk.Button(close_frame, text="🚪 Close Application", 
+                              command=self._on_closing, width=25)
+        close_btn.pack(pady=5)
+        
+        # Keyboard shortcuts info
+        shortcuts_text = """Keyboard Shortcuts:
+• Ctrl+Q: Close application
+• Escape: Close application
+• X button: Close application"""
+        
+        shortcuts_label = ttk.Label(close_frame, text=shortcuts_text, 
+                                   font=('Arial', 9), justify=tk.LEFT)
+        shortcuts_label.pack(pady=(5, 0))
+    
+    def _on_closing(self):
+        """Handle application closing with proper cleanup"""
+        try:
+            # Close matplotlib figures to free memory
+            if hasattr(self, 'fig'):
+                plt.close(self.fig)
+            
+            # Destroy the root window
+            if hasattr(self, 'root'):
+                self.root.destroy()
+            
+            print("\n✅ Application closed successfully!")
+            
+        except Exception as e:
+            print(f"Error during closing: {e}")
+            # Force exit if there's an issue
+            import sys
+            sys.exit(0)
+    
+    def _position_window_on_primary_monitor(self):
+        """Position window on primary monitor and center it"""
+        try:
+            # Get screen dimensions
+            screen_width = self.root.winfo_screenwidth()
+            screen_height = self.root.winfo_screenheight()
+            
+            # Get window dimensions
+            window_width = 1600
+            window_height = 1000
+            
+            # Calculate position to center the window
+            x = (screen_width - window_width) // 2
+            y = (screen_height - window_height) // 2
+            
+            # Ensure window is not positioned off-screen
+            x = max(0, x)
+            y = max(0, y)
+            
+            # Set window position
+            self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+            
+            # Force window to appear on primary monitor and maximize
+            self.root.lift()
+            self.root.focus_force()
+            self.root.state('zoomed')  # Maximize on Windows
+            
+            # Additional positioning after maximize
+            self.root.after(100, self._ensure_primary_monitor)
+            
+        except Exception as e:
+            print(f"Warning: Could not position window optimally: {e}")
+            # Fallback to default centering
+            self.root.eval('tk::PlaceWindow . center')
+    
+    def _ensure_primary_monitor(self):
+        """Ensure window stays on primary monitor after maximize"""
+        try:
+            # Get current window position
+            geometry = self.root.geometry()
+            if '+' in geometry:
+                x_pos = int(geometry.split('+')[1])
+                y_pos = int(geometry.split('+')[2])
+                
+                # If window is positioned off primary monitor, move it back
+                screen_width = self.root.winfo_screenwidth()
+                if x_pos < 0 or x_pos > screen_width:
+                    self.root.geometry(f"+0+0")
+                    self.root.state('zoomed')
+        except Exception as e:
+            print(f"Warning: Could not ensure primary monitor: {e}")
     
     def _create_matplotlib_graph(self, parent):
         """Create embedded matplotlib graph"""
@@ -1239,6 +1547,291 @@ def get_user_date_input(prompt: str, default: str) -> str:
         except ValueError:
             print("Invalid date format. Please use YYYY-MM-DD format (e.g., 2024-06-01)")
 
+class CALFundConfigGUI:
+    """Configuration GUI for CAL Fund Analyzer"""
+    
+    def __init__(self):
+        self.root = None
+        self.selected_fund = None
+        self.start_date = None
+        self.end_date = None
+        self.api_delay = None
+        self.available_funds = []
+        self.earliest_dates = {}
+        
+    def run(self):
+        """Run the configuration GUI"""
+        # Discover available funds first
+        temp_extractor = CALFundExtractor()
+        self.available_funds = temp_extractor.discover_available_funds()
+        
+        if not self.available_funds:
+            print("Failed to discover available funds. Using default fund.")
+            self.selected_fund = "Capital Alliance Quantitative Equity Fund"
+            self.earliest_dates = {self.selected_fund: "2013-01-01"}
+        else:
+            self.earliest_dates = temp_extractor.get_all_funds_earliest_dates()
+            self.selected_fund = self.available_funds[0]  # Default to first fund
+        
+        # Create GUI
+        self._create_config_gui()
+        
+    def _create_config_gui(self):
+        """Create the configuration GUI"""
+        self.root = tk.Tk()
+        self.root.title("CAL Fund Analyzer - Configuration")
+        self.root.geometry("700x600")
+        self.root.configure(bg='#f0f0f0')
+        self.root.minsize(600, 500)  # Set minimum size
+        
+        # Position window on primary monitor
+        self._position_config_window_on_primary_monitor()
+        
+        # Create scrollable main frame
+        canvas = tk.Canvas(self.root)
+        scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Main frame inside scrollable area
+        main_frame = ttk.Frame(scrollable_frame)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # Title
+        title_label = ttk.Label(main_frame, text="CAL Fund Analyzer Configuration", 
+                               font=('Arial', 16, 'bold'))
+        title_label.pack(pady=(0, 20))
+        
+        # Fund selection
+        self._create_fund_selection(main_frame)
+        
+        # Date range selection
+        self._create_date_selection(main_frame)
+        
+        # API settings
+        self._create_api_settings(main_frame)
+        
+        # Buttons
+        self._create_action_buttons(main_frame)
+        
+        # Initialize the earliest date display after all elements are created
+        self._update_earliest_date()
+        
+        # Bind mousewheel to canvas for scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # Start the GUI
+        self.root.mainloop()
+    
+    def _position_config_window_on_primary_monitor(self):
+        """Position configuration window on primary monitor and center it"""
+        try:
+            # Get screen dimensions
+            screen_width = self.root.winfo_screenwidth()
+            screen_height = self.root.winfo_screenheight()
+            
+            # Get window dimensions
+            window_width = 700
+            window_height = 600
+            
+            # Calculate position to center the window
+            x = (screen_width - window_width) // 2
+            y = (screen_height - window_height) // 2
+            
+            # Ensure window is not positioned off-screen
+            x = max(0, x)
+            y = max(0, y)
+            
+            # Set window position
+            self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+            
+            # Force window to appear on primary monitor
+            self.root.lift()
+            self.root.focus_force()
+            
+            # Additional positioning after a short delay
+            self.root.after(100, self._ensure_config_primary_monitor)
+            
+        except Exception as e:
+            print(f"Warning: Could not position config window optimally: {e}")
+            # Fallback to default centering
+            self.root.eval('tk::PlaceWindow . center')
+    
+    def _ensure_config_primary_monitor(self):
+        """Ensure config window stays on primary monitor"""
+        try:
+            # Get current window position
+            geometry = self.root.geometry()
+            if '+' in geometry:
+                x_pos = int(geometry.split('+')[1])
+                y_pos = int(geometry.split('+')[2])
+                
+                # If window is positioned off primary monitor, move it back
+                screen_width = self.root.winfo_screenwidth()
+                if x_pos < 0 or x_pos > screen_width:
+                    self.root.geometry(f"+0+0")
+        except Exception as e:
+            print(f"Warning: Could not ensure config primary monitor: {e}")
+    
+    def _create_fund_selection(self, parent):
+        """Create fund selection section"""
+        fund_frame = ttk.LabelFrame(parent, text="Fund Selection", padding="10")
+        fund_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        ttk.Label(fund_frame, text="Select Fund:").pack(anchor=tk.W)
+        
+        self.fund_var = tk.StringVar(value=self.selected_fund)
+        fund_combo = ttk.Combobox(fund_frame, textvariable=self.fund_var, 
+                                 values=self.available_funds, state="readonly", width=50)
+        fund_combo.pack(fill=tk.X, pady=(5, 0))
+        
+        # Show earliest date for selected fund
+        self.earliest_date_label = ttk.Label(fund_frame, text="", font=('Arial', 9))
+        self.earliest_date_label.pack(pady=(5, 0))
+        
+        # Update earliest date when fund changes
+        fund_combo.bind('<<ComboboxSelected>>', self._on_fund_changed)
+    
+    def _create_date_selection(self, parent):
+        """Create date range selection section"""
+        date_frame = ttk.LabelFrame(parent, text="Date Range", padding="10")
+        date_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        # Start date
+        ttk.Label(date_frame, text="Start Date:").pack(anchor=tk.W)
+        self.start_date_var = tk.StringVar(value="2013-01-01")
+        start_date_entry = ttk.Entry(date_frame, textvariable=self.start_date_var, width=15)
+        start_date_entry.pack(pady=(5, 10))
+        
+        # End date
+        ttk.Label(date_frame, text="End Date:").pack(anchor=tk.W)
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        self.end_date_var = tk.StringVar(value=yesterday)
+        end_date_entry = ttk.Entry(date_frame, textvariable=self.end_date_var, width=15)
+        end_date_entry.pack(pady=(5, 0))
+        
+        # Date format help
+        ttk.Label(date_frame, text="Format: YYYY-MM-DD (e.g., 2024-01-01)", 
+                 font=('Arial', 8), foreground='gray').pack(pady=(5, 0))
+    
+    def _create_api_settings(self, parent):
+        """Create API settings section"""
+        api_frame = ttk.LabelFrame(parent, text="API Settings", padding="10")
+        api_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        ttk.Label(api_frame, text="API Delay (seconds):").pack(anchor=tk.W)
+        self.api_delay_var = tk.StringVar(value="0.5")
+        api_delay_entry = ttk.Entry(api_frame, textvariable=self.api_delay_var, width=10)
+        api_delay_entry.pack(pady=(5, 0))
+        
+        ttk.Label(api_frame, text="Delay between API requests to avoid rate limiting", 
+                 font=('Arial', 8), foreground='gray').pack(pady=(5, 0))
+    
+    def _create_action_buttons(self, parent):
+        """Create action buttons"""
+        button_frame = ttk.Frame(parent)
+        button_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        # Start Analysis button
+        start_btn = ttk.Button(button_frame, text="🚀 Start Analysis", 
+                              command=self._start_analysis, width=20)
+        start_btn.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Cancel button
+        cancel_btn = ttk.Button(button_frame, text="❌ Cancel", 
+                               command=self._cancel, width=15)
+        cancel_btn.pack(side=tk.LEFT)
+    
+    def _on_fund_changed(self, event=None):
+        """Handle fund selection change"""
+        self.selected_fund = self.fund_var.get()
+        self._update_earliest_date()
+    
+    def _update_earliest_date(self):
+        """Update the earliest date display"""
+        if self.selected_fund in self.earliest_dates:
+            earliest_date = self.earliest_dates[self.selected_fund]
+            self.earliest_date_label.config(text=f"📅 Data available from: {earliest_date}")
+            # Update start date to fund's earliest date
+            self.start_date_var.set(earliest_date)
+    
+    def _start_analysis(self):
+        """Start the analysis with current settings"""
+        try:
+            # Validate inputs
+            self.selected_fund = self.fund_var.get()
+            self.start_date = self.start_date_var.get()
+            self.end_date = self.end_date_var.get()
+            self.api_delay = float(self.api_delay_var.get())
+            
+            # Validate dates
+            datetime.strptime(self.start_date, "%Y-%m-%d")
+            datetime.strptime(self.end_date, "%Y-%m-%d")
+            
+            # Validate API delay
+            if self.api_delay < 0:
+                raise ValueError("API delay must be 0 or greater")
+            
+            # Close config window
+            self.root.destroy()
+            
+            # Start the main analysis
+            self._run_analysis()
+            
+        except ValueError as e:
+            messagebox.showerror("Invalid Input", f"Please check your inputs:\n{e}")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred:\n{e}")
+    
+    def _run_analysis(self):
+        """Run the main analysis with configured settings"""
+        print(f"\n" + "=" * 50)
+        print(f"Target Fund: {self.selected_fund}")
+        print(f"Date Range: {self.start_date} - {self.end_date}")
+        print(f"API Delay: {self.api_delay} seconds between requests")
+        print("=" * 50)
+        
+        # Create the main extractor
+        extractor = CALFundExtractor(self.selected_fund, self.start_date, self.end_date, self.api_delay)
+        
+        # Collect price data
+        price_data = extractor.collect_price_data()
+        
+        if price_data:
+            print(f"\nSuccessfully collected {len(price_data)} data points")
+            
+            # Save data to CSV
+            extractor.save_data_to_csv(price_data)
+            
+            # Create and display graph
+            extractor.create_graph(price_data)
+            
+            # Display raw data
+            print(f"\nRaw Data:")
+            print("-" * 30)
+            for date, price in sorted(price_data.items()):
+                print(f"{date}: {price:.4f}")
+        else:
+            print("No data was collected. Please check the API endpoint and try again.")
+    
+    def _cancel(self):
+        """Cancel and exit"""
+        self.root.destroy()
+        print("Configuration cancelled.")
+
 def get_user_api_delay_input(prompt: str, default: float) -> float:
     """Get API delay input from user with validation"""
     while True:
@@ -1319,61 +1912,12 @@ def main():
         
         return
     
-    # Normal mode - single fund analysis
-    print("Running in NORMAL mode - analyzing a specific fund")
-    print("=" * 50)
+    # Normal mode - start with configuration GUI
+    print("Starting CAL Fund Analyzer with GUI configuration...")
     
-    # Create a temporary extractor to discover available funds and their earliest dates
-    temp_extractor = CALFundExtractor()
-    available_funds = temp_extractor.discover_available_funds()
-    
-    if not available_funds:
-        print("Failed to discover available funds. Using default fund.")
-        selected_fund = "Capital Alliance Quantitative Equity Fund"
-        earliest_dates = {selected_fund: "2013-01-01"}
-    else:
-        # Get earliest dates for all funds
-        earliest_dates = temp_extractor.get_all_funds_earliest_dates()
-        selected_fund = get_user_fund_selection(available_funds, earliest_dates)
-    
-    # Get date range from user (with fund-specific defaults)
-    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    fund_earliest_date = earliest_dates.get(selected_fund, "2013-01-01")
-    start_date = get_user_date_input("Enter start date (YYYY-MM-DD)", fund_earliest_date)
-    end_date = get_user_date_input("Enter end date (YYYY-MM-DD)", yesterday)
-    
-    # Get API delay from user
-    api_delay = get_user_api_delay_input("Enter API delay between requests", 0.5)
-    
-    # Create the main extractor with user selections
-    extractor = CALFundExtractor(selected_fund, start_date, end_date, api_delay)
-    
-    print("\n" + "=" * 50)
-    print(f"Target Fund: {extractor.target_fund_name}")
-    print(f"Date Range: {extractor.start_date} - {extractor.end_date} (1st & 15th of each month)")
-    print(f"API Delay: {extractor.api_delay} seconds between requests")
-    print(f"Data will be saved to: {extractor.csv_filename}")
-    print("=" * 50)
-    
-    # Collect price data
-    price_data = extractor.collect_price_data()
-    
-    if price_data:
-        print(f"\nSuccessfully collected {len(price_data)} data points")
-        
-        # Save data to CSV
-        extractor.save_data_to_csv(price_data)
-        
-        # Create and display graph
-        extractor.create_graph(price_data)
-        
-        # Display raw data
-        print(f"\nRaw Data:")
-        print("-" * 30)
-        for date, price in sorted(price_data.items()):
-            print(f"{date}: {price:.4f}")
-    else:
-        print("No data was collected. Please check the API endpoint and try again.")
+    # Create configuration GUI
+    config_gui = CALFundConfigGUI()
+    config_gui.run()
 
 if __name__ == "__main__":
     main()

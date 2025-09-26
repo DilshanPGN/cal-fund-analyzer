@@ -1,31 +1,67 @@
-# CAL Fund Data Extractor
+# CAL Fund Analyzer
 
-A comprehensive Python tool for extracting and analyzing unit trust fund data from Capital Alliance (CAL) API. This interactive script automatically discovers available funds, fetches historical fund prices, and creates detailed visualizations for investment analysis.
+A comprehensive Python tool for extracting and analyzing unit trust fund data from Capital Alliance (CAL) API. This modern GUI application automatically discovers available funds, fetches historical fund prices, and creates detailed visualizations for investment analysis.
 
 ## 🚀 Features
 
-- **Two Operation Modes**: Normal mode for single fund analysis and Init mode for bulk data collection
-- **Bulk Data Collection**: Init command efficiently collects data for ALL available funds in one operation
-- **Interactive Fund Selection**: Automatically discovers and allows selection from all available CAL funds
-- **Smart Data Caching**: Loads existing data to avoid redundant API calls and speeds up analysis
-- **Auto Start Date Detection**: Automatically detects the earliest available date for each fund from existing CSV files
-- **Fund-Specific Defaults**: Each fund uses its own earliest date as the default start date (no more invalid date ranges)
-- **Extended Historical Data**: Default date range from fund-specific earliest date to current date - 1
-- **Flexible Date Ranges**: Customizable start and end dates with intelligent date generation
-- **Strategic Sampling**: Collects data on 1st and 15th of each month for comprehensive trend analysis
-- **Dynamic File Naming**: Automatically generates fund-specific CSV and graph filenames
-- **Professional Manual UI**: Dedicated tkinter interface with embedded matplotlib graphs and intuitive controls
-- **Financial Context Analysis**: AI-powered analysis of fund performance with Sri Lankan economic context
-- **Interactive Analysis Buttons**: One-click analysis for crisis periods, recovery periods, and custom date ranges
+### 🖥️ **Modern GUI Interface**
+- **Complete GUI Configuration**: All settings (fund selection, date ranges, API delay) handled through intuitive GUI
+- **No Terminal Input Required**: Fully graphical interface eliminates command-line complexity
+- **Multi-Window Support**: Configuration window, main analysis window, and dialog windows
+- **Smart Window Positioning**: Automatic positioning on primary monitor with proper centering
+- **Scrollable Interface**: Scrollable panels for better content organization
+- **Professional Layout**: Clean, modern interface with organized sections
+
+### 📊 **Enhanced Data Management**
+- **Refresh Data Button**: Update fund data without restarting the application
+- **Change Fund Button**: Switch between different funds seamlessly
+- **Real-time Status Updates**: Live status messages during data operations
+- **Smart Data Caching**: Loads existing data to avoid redundant API calls
+- **Auto Start Date Detection**: Automatically detects earliest available date for each fund
+- **Fund-Specific Defaults**: Each fund uses its own earliest date as default start date
+- **Extended Historical Data**: Default date range from fund-specific earliest date to current date
+- **Strategic Sampling**: Collects data on 1st and 15th of each month plus current date
+
+### 🎯 **Two Operation Modes**
+- **Normal Mode**: Single fund analysis with full GUI interface
+- **Init Mode**: Bulk data collection for ALL available funds
+- **GUI Configuration**: Both modes use graphical interface for setup
+- **Seamless Workflow**: Easy switching between modes
+
+### 🔍 **Advanced Analysis Features**
+- **Financial Context Analysis**: AI-powered analysis with Sri Lankan economic context
+- **Interactive Analysis Buttons**: One-click analysis for crisis periods, recovery periods, and custom ranges
 - **Real-time Graph Updates**: Dynamic date range filtering with instant graph refresh
-- **Popup Analysis Results**: Detailed financial context analysis in dedicated popup windows
-- **Data Export**: Saves raw data in CSV format for further analysis and external tools
-- **Robust Error Handling**: Comprehensive error handling for network issues and data parsing
-- **API-Friendly**: Implements respectful delays between API calls to protect server resources
-- **Progress Tracking**: Real-time progress updates and data coverage summaries
-- **Smart Data Handling**: Automatically skips dates with no data instead of showing errors
-- **Large Dataset Management**: Automatic filtering suggestions for datasets with 100+ data points
-- **Smart Data Filtering**: Only loads cached data within the current date range to avoid showing old data
+- **Popup Analysis Results**: Detailed analysis in dedicated popup windows
+- **Current View Analysis**: Analyze the currently visible graph area
+- **Custom Date Range Analysis**: User-defined period analysis with dialog inputs
+
+### 🖼️ **Professional Visualization**
+- **Embedded Matplotlib Graphs**: Full-featured interactive graphs within GUI
+- **Complete Navigation Controls**: Zoom, pan, home, back/forward controls
+- **High-Resolution Export**: 300 DPI PNG export for presentations
+- **Dynamic Graph Updates**: Real-time updates when changing date ranges
+- **Professional Styling**: High-quality graphs with proper formatting
+
+### 🔧 **User Experience Improvements**
+- **Easy Application Closing**: Multiple ways to close (button, keyboard shortcuts, window controls)
+- **Keyboard Shortcuts**: Ctrl+Q and Escape keys for quick closing
+- **Proper Window Management**: Automatic maximization and primary monitor positioning
+- **Scrollable Content**: Mouse wheel support for scrolling through interface elements
+- **Responsive Design**: Adapts to different screen sizes with minimum size constraints
+- **Error Handling**: Comprehensive error handling with user-friendly messages
+
+### 📁 **Smart File Management**
+- **Dynamic File Naming**: Automatic generation of fund-specific filenames
+- **Data Export**: Saves raw data in CSV format for external analysis
+- **Safe Data Handling**: Preserves existing data while updating with new information
+- **Bulk File Creation**: Init mode creates individual CSV files for all funds
+
+### 🌐 **API Integration**
+- **Automatic Fund Discovery**: Discovers all available CAL funds from API
+- **API-Friendly**: Implements respectful delays between API calls
+- **Progress Tracking**: Real-time progress updates during data collection
+- **Smart Error Handling**: Gracefully handles network issues and missing data
 
 ## 📋 Prerequisites
 
@@ -47,185 +83,115 @@ For detailed installation instructions, including Python setup, see [install_ins
 
 ## 🎯 Usage
 
-### Two Operation Modes
-
-#### 1. Normal Mode - Single Fund Analysis
-Run the script with a simple command:
+### 🚀 **Quick Start**
+Simply run the application:
 ```bash
 python cal_fund_extractor.py
 ```
 
-#### 2. Init Mode - Bulk Data Collection
-Collect data for ALL available funds efficiently:
+The application will open with a modern GUI interface - no command-line input required!
+
+### 🖥️ **GUI Workflow**
+
+#### **1. Configuration Window**
+When you start the application, you'll see a configuration window with:
+
+- **Fund Selection Dropdown**: Choose from all available CAL funds
+- **Date Range Inputs**: Set start and end dates (defaults provided automatically)
+- **API Delay Setting**: Configure delay between API calls (default: 0.5 seconds)
+- **Start Analysis Button**: Begin data collection and analysis
+
+#### **2. Main Analysis Window**
+After configuration, the main analysis window opens with:
+
+**Left Control Panel:**
+- **Fund Information**: Current fund name and data summary
+- **Analysis Options**: Five analysis buttons for different time periods
+- **Data Management**: Refresh data and change fund buttons
+- **Date Range Controls**: Update graph with new date ranges
+- **Help Section**: Built-in instructions and tips
+- **Close Application**: Easy application closing options
+
+**Right Graph Panel:**
+- **Interactive Graph**: Full-featured matplotlib graph with navigation controls
+- **Zoom & Pan**: Mouse wheel zoom, click-and-drag pan
+- **Navigation Toolbar**: Home, back/forward, zoom, pan, save controls
+
+### 🎯 **Two Operation Modes**
+
+#### **Normal Mode - Single Fund Analysis**
+```bash
+python cal_fund_extractor.py
+```
+- Opens GUI configuration window
+- Select fund, dates, and settings
+- Launches main analysis interface
+- Full interactive analysis capabilities
+
+#### **Init Mode - Bulk Data Collection**
 ```bash
 python cal_fund_extractor.py init
 ```
+- Opens GUI configuration window
+- Collects data for ALL available funds
+- Creates individual CSV files for each fund
+- Efficient bulk data collection
 
-### Normal Mode Workflow
-The script will guide you through the following steps:
+### 🔄 **Data Management Features**
 
-1. **Fund Discovery**: Automatically discovers all available CAL funds from the API
-2. **Fund Selection**: Presents a numbered list of available funds for you to choose from
-3. **Date Range Configuration**: Allows you to specify custom start and end dates (defaults provided)
-4. **Data Collection**: Intelligently collects data, using cached data when available
-5. **Progress Tracking**: Shows real-time progress and data coverage summaries
-6. **Data Storage**: Saves collected data to a fund-specific CSV file
-7. **Manual UI Launch**: Opens the professional tkinter interface with embedded graph
-8. **Interactive Analysis**: Use analysis buttons and date controls for comprehensive analysis
-9. **Financial Context**: View detailed analysis results in popup windows
+#### **Refresh Data**
+- Click "Refresh Data" button to update current fund data
+- Automatically fetches latest data points
+- Updates graph and data summary
+- No need to restart application
 
-### Init Mode Workflow
-The init command efficiently collects data for all funds:
+#### **Change Fund**
+- Click "Change Fund" button to switch funds
+- Opens fund selection dialog
+- Automatically loads new fund data
+- Updates interface with new fund information
 
-1. **Fund Discovery**: Automatically discovers all available CAL funds from the API
-2. **Date Range Configuration**: Allows you to specify custom start and end dates (defaults provided)
-3. **Smart Data Collection**: Collects data for ALL funds using single API call per date
-4. **Progress Tracking**: Shows real-time progress across all funds
-5. **Bulk Data Storage**: Creates individual CSV files for each fund
-6. **Efficiency Summary**: Reports total files created and data points collected
+#### **Real-time Status**
+- Live status messages during operations
+- Progress indicators for data collection
+- Error messages with helpful suggestions
+- Success confirmations for completed operations
 
-### Example Normal Mode Session
-```
-CAL Fund Data Extractor
-==================================================
-Running in NORMAL mode - analyzing a specific fund
-==================================================
+### 🎮 **Interactive Analysis Features**
 
-Discovering available funds using sample date: 2024-06-01
-Found 13 available funds
+#### **Analysis Buttons**
+- **🔍 Analyze Current View**: Analyzes the currently visible graph area
+- **🚨 Crisis Period (2022)**: Pre-configured analysis for economic crisis
+- **📈 Recovery Period (2023)**: Pre-configured analysis for post-crisis recovery
+- **📊 Recent 6 Months**: Automatic analysis of the most recent performance
+- **📅 Custom Date Range**: User-defined period analysis with dialog inputs
 
-Detecting earliest dates for 13 funds:
---------------------------------------------------
-Found earliest date for Capital Alliance Corporate Treasury Fund: 2013-04-01
-Found earliest date for Capital Alliance Medium Risk Debt Fund: 2013-12-15
-Found earliest date for CAL Fixed Income Opportunities Fund: 2013-12-15
-Found earliest date for CAL Money Market Fund: 2015-01-01
-Found earliest date for Capital Alliance Gilt Fund: 2013-08-15
-Found earliest date for Capital Alliance Income Fund: 2014-03-15
-Found earliest date for Capital Alliance Gilt Trading Fund: 2015-01-15
-Found earliest date for Capital Alliance Investment Grade Fund: 2013-09-01
-Found earliest date for Capital Alliance High Yield Fund: 2013-01-01
-Found earliest date for Capital Alliance Quantitative Equity Fund: 2013-01-15
-Found earliest date for Capital Alliance Balanced Fund: 2015-02-01
-Found earliest date for CAL Five year Optimum Fund: 2023-07-01
-Found earliest date for FYCF: 2024-09-15
+#### **Graph Controls**
+- **Mouse Wheel**: Scroll up to zoom in, scroll down to zoom out
+- **Click & Drag**: Pan around when zoomed in
+- **Navigation Toolbar**: Complete set of zoom, pan, and navigation controls
+- **Home Button**: Reset to original full view
+- **Save Button**: Export current view as high-resolution image
 
-Available Funds:
---------------------------------------------------------------------------------
- 1. Capital Alliance Corporate Treasury Fund
-    📅 Data available from: 2013-04-01
- 2. Capital Alliance Medium Risk Debt Fund
-    📅 Data available from: 2013-12-15
- 3. CAL Fixed Income Opportunities Fund
-    📅 Data available from: 2013-12-15
- 4. CAL Money Market Fund
-    📅 Data available from: 2015-01-01
- 5. Capital Alliance Gilt Fund
-    📅 Data available from: 2013-08-15
- 6. Capital Alliance Income Fund
-    📅 Data available from: 2014-03-15
- 7. Capital Alliance Gilt Trading Fund
-    📅 Data available from: 2015-01-15
- 8. Capital Alliance Investment Grade Fund
-    📅 Data available from: 2013-09-01
- 9. Capital Alliance High Yield Fund
-    📅 Data available from: 2013-01-01
-10. Capital Alliance Quantitative Equity Fund
-    📅 Data available from: 2013-01-15
-11. Capital Alliance Balanced Fund
-    📅 Data available from: 2015-02-01
-12. CAL Five year Optimum Fund
-    📅 Data available from: 2023-07-01
-13. FYCF
-    📅 Data available from: 2024-09-15
+#### **Date Range Controls**
+- **Start Date Input**: Modify the start date for analysis
+- **End Date Input**: Modify the end date for analysis
+- **Update Graph Button**: Refresh graph with new date range
+- **Real-time Validation**: Error messages for invalid date formats
 
-Select a fund (1-13) or press Enter for default: 12
+### 🚪 **Application Closing Options**
 
-Enter start date (YYYY-MM-DD) (default: 2023-07-01): 
-Enter end date (YYYY-MM-DD) (default: 2024-12-19): 
+#### **Multiple Ways to Close**
+- **Close Button**: Click the "🚪 Close Application" button in the interface
+- **Keyboard Shortcuts**: Press `Ctrl+Q` or `Escape` key
+- **Window Controls**: Use the standard window close button (X)
+- **Proper Cleanup**: All methods ensure proper resource cleanup
 
-==================================================
-Target Fund: CAL Five year Optimum Fund
-Date Range: 2023-07-01 - 2024-12-19 (1st & 15th of each month)
-Data will be saved to: cal_fund_data_CAL_Five_year_Optimum_Fund.csv
-==================================================
-
-Data Coverage Summary:
-  Total dates in range: 12
-  Existing data points: 12
-  Missing data points: 0
-  ✅ All 12 dates already have data - no API calls needed!
-```
-
-### Example Init Mode Session
-```
-CAL Fund Data Extractor
-==================================================
-Running INIT command - collecting data for all available funds
-==================================================
-
-Discovering available funds using sample date: 2024-12-09
-Found 13 available funds
-
-Detecting earliest dates for 13 funds:
---------------------------------------------------
-Found earliest date for Capital Alliance Corporate Treasury Fund: 2013-04-01
-Found earliest date for Capital Alliance Medium Risk Debt Fund: 2013-12-15
-Found earliest date for CAL Fixed Income Opportunities Fund: 2013-12-15
-Found earliest date for CAL Money Market Fund: 2015-01-01
-Found earliest date for Capital Alliance Gilt Fund: 2013-08-15
-Found earliest date for Capital Alliance Income Fund: 2014-03-15
-Found earliest date for Capital Alliance Gilt Trading Fund: 2015-01-15
-Found earliest date for Capital Alliance Investment Grade Fund: 2013-09-01
-Found earliest date for Capital Alliance High Yield Fund: 2013-01-01
-Found earliest date for Capital Alliance Quantitative Equity Fund: 2013-01-15
-Found earliest date for Capital Alliance Balanced Fund: 2015-02-01
-Found earliest date for CAL Five year Optimum Fund: 2023-07-01
-Found earliest date for FYCF: 2024-09-15
-
-Earliest data available across all funds: 2013-01-01
-Enter start date (YYYY-MM-DD) (default: 2013-01-01): 
-Enter end date (YYYY-MM-DD) (default: 2024-12-19): 
-
-==================================================
-INIT Mode: Collecting data for ALL available funds
-Date Range: 2013-01-01 - 2024-12-19 (1st & 15th of each month)
-API Delay: 0.5 seconds between requests
-==================================================
-
-Initializing data collection for all funds using sample date: 2024-12-09
-Found 13 available funds:
-   1. Capital Alliance Corporate Treasury Fund
-   2. Capital Alliance Medium Risk Debt Fund
-   3. CAL Fixed Income Opportunities Fund
-   4. CAL Money Market Fund
-   5. Capital Alliance Gilt Fund
-   6. Capital Alliance Income Fund
-   7. Capital Alliance Gilt Trading Fund
-   8. Capital Alliance Investment Grade Fund
-   9. Capital Alliance High Yield Fund
-  10. Capital Alliance Quantitative Equity Fund
-  11. Capital Alliance Balanced Fund
-  12. CAL Five year Optimum Fund
-  13. FYCF
-
-Data Coverage Summary:
-  Total dates in range: 32
-  Unique dates needing API calls: 0
-  Existing data points: 384/416
-  ✅ All 32 dates already have data for all funds - no API calls needed!
-
-File Summary:
-  📁 New files created: 0
-  🔄 Existing files updated: 13
-
-✅ INIT completed successfully!
-📊 Collected data for 13 funds
-📁 Created CSV files for each fund
-
-You can now run the normal mode to analyze specific funds:
-  python cal_fund_extractor.py
-```
+#### **Window Management**
+- **Automatic Positioning**: Windows open on primary monitor
+- **Smart Centering**: Automatic centering and sizing
+- **Maximization**: Main window opens maximized for better viewing
+- **Multi-Monitor Support**: Proper handling of multiple monitor setups
 
 ## 🎯 When to Use Each Mode
 
@@ -398,62 +364,42 @@ The script provides:
 - Professional interactive graph with full zoom/pan controls
 - Raw data display for verification
 
-## 🖥️ Manual UI Interface
+## 🖥️ **Modern GUI Interface**
 
-### Interface Layout
-The new manual UI provides a professional, user-friendly interface with:
+### **Configuration Window**
+The application starts with a clean configuration interface:
 
-**Left Control Panel (300px width):**
-- **Fund Information**: Displays selected fund name and data summary
+- **Fund Selection Dropdown**: Choose from all available CAL funds with earliest dates displayed
+- **Date Range Inputs**: Start and end date fields with automatic defaults
+- **API Delay Setting**: Configurable delay between API calls (default: 0.5 seconds)
+- **Start Analysis Button**: Begin data collection and launch main interface
+- **Scrollable Content**: Mouse wheel support for easy navigation
+- **Smart Positioning**: Automatic centering on primary monitor
+
+### **Main Analysis Window**
+Professional analysis interface with organized layout:
+
+**Left Control Panel (350px width):**
+- **Fund Information**: Current fund name and comprehensive data summary
 - **Analysis Options**: Five analysis buttons for different time periods
+- **Data Management**: Refresh data and change fund buttons
 - **Date Range Controls**: Start/end date inputs with update button
 - **Help & Instructions**: Comprehensive usage guide
+- **Close Application**: Multiple closing options with keyboard shortcuts
+- **Scrollable Content**: Mouse wheel support for all sections
 
-**Right Graph Panel (1100px width):**
+**Right Graph Panel (1250px width):**
 - **Embedded Matplotlib Graph**: Full-featured interactive graph
 - **Navigation Toolbar**: Complete zoom, pan, and navigation controls
 - **Real-time Updates**: Graph refreshes when date range changes
+- **High-Resolution Display**: Professional-quality graph rendering
 
-### Analysis Buttons
-- **🔍 Analyze Current View**: Analyzes the currently visible graph area
-- **🚨 Crisis Period (2022)**: Pre-configured analysis for economic crisis
-- **📈 Recovery Period (2023)**: Pre-configured analysis for post-crisis recovery
-- **📊 Recent 6 Months**: Automatic analysis of the most recent performance
-- **📅 Custom Date Range**: User-defined period analysis with dialog inputs
-
-### Date Range Controls
-- **Start Date Entry**: Text field showing current data start date
-- **End Date Entry**: Text field showing current data end date
-- **Update Graph Button**: Refreshes graph with new date range
-- **Real-time Validation**: Error messages for invalid date formats
-
-### Analysis Results
-- **Popup Windows**: Dedicated windows for each analysis result
-- **Scrollable Text**: Large text areas for detailed analysis
-- **Formatted Output**: Clean, readable analysis presentation
-- **Dynamic Titles**: Each window shows the specific analysis period
-
-## 🎮 Interactive Graph Controls
-
-### Mouse Controls
-- **Scroll Up**: Zoom in to see more detail
-- **Scroll Down**: Zoom out to see broader view
-- **Click & Drag**: Pan around when zoomed in
-
-### Toolbar Controls
-- **🏠 Home**: Reset to original full view (instant zoom out)
-- **⬅️ Back**: Go to previous zoom level
-- **➡️ Forward**: Go to next zoom level
-- **✋ Pan**: Enable pan mode for moving around
-- **🔍 Zoom**: Enable zoom mode for selecting areas to zoom into
-- **⚙️ Configure**: Adjust plot settings and appearance
-- **💾 Save**: Save the current view as an image
-
-### Manual UI Controls
-- **Analysis Buttons**: Click any button for instant financial context analysis
-- **Date Range Inputs**: Type new dates and click "Update Graph" to refresh
-- **Popup Windows**: View detailed analysis results in dedicated windows
-- **Help Section**: Built-in instructions and usage tips
+### **Window Management Features**
+- **Automatic Maximization**: Main window opens maximized for optimal viewing
+- **Primary Monitor Positioning**: Ensures windows open on correct monitor
+- **Smart Centering**: Automatic centering and proper sizing
+- **Multi-Monitor Support**: Proper handling of multiple monitor setups
+- **Responsive Design**: Adapts to different screen sizes with minimum constraints
 
 ## 🧠 Financial Context Analysis
 
@@ -555,32 +501,36 @@ The financial context analysis feature provides intelligent analysis of fund per
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### **GUI Issues**
+- **Window Positioning**: If windows open on wrong monitor, check your display settings
+- **Scrolling Problems**: Use mouse wheel to scroll through interface elements
+- **Button Not Working**: Ensure you're clicking within the button area
+- **Graph Not Displaying**: Check if matplotlib backend is properly configured
+- **Popup Windows**: Analysis results open in dedicated windows - check if they're behind main window
+- **Application Won't Close**: Try Ctrl+Q, Escape key, or the close button
+
+### **Data Collection Issues**
 - **API Timeout**: Check internet connection and try again
 - **Missing Data**: Some dates may not have data available - this is normal
-- **Graph Display**: Ensure matplotlib backend is properly configured
-- **Fund Not Found**: If a fund doesn't appear in the list, check if it's available in the API
+- **Fund Not Found**: If a fund doesn't appear in dropdown, check if it's available in API
 - **Cached Data Issues**: Delete the CSV file if you suspect corrupted cached data
-- **Manual UI Issues**: Ensure tkinter is properly installed (usually included with Python)
-- **Button Clicks**: All analysis buttons should work without errors - check console for debug messages
-- **Popup Windows**: Analysis results open in dedicated windows - check if they're behind the main window
-
-### Data Collection Issues
-- **Partial Data**: The script will show which dates have data and which are missing
-- **Missing Data Handling**: Dates with no data are automatically skipped (no errors shown)
+- **Partial Data**: The application will show which dates have data and which are missing
 - **API Rate Limiting**: If you get blocked, wait a few minutes before retrying
-- **Date Range Errors**: Ensure dates are in YYYY-MM-DD format and within API range
-- **Large Datasets**: For datasets with 100+ points, consider using the filtering option
-- **Old Data Display**: Cached data is automatically filtered to only show data within your current date range
 
-### Getting Help
+### **Window Management Issues**
+- **Multi-Monitor Problems**: Application automatically positions on primary monitor
+- **Window Too Small**: Application has minimum size constraints to prevent issues
+- **Maximization Issues**: Main window should open maximized automatically
+- **Dialog Positioning**: All dialogs are centered on primary monitor
+
+### **Getting Help**
 If you encounter issues:
 1. Check the console output for detailed error messages and progress updates
 2. Verify your internet connection and API endpoint availability
 3. Ensure all dependencies are installed correctly (`pip install -r requirements.txt`)
-4. Check if the fund you selected is available in the discovered fund list
-5. Try deleting existing CSV files if you suspect data corruption
-6. Verify date format (YYYY-MM-DD) and ensure dates are within reasonable range
+4. Try refreshing data or changing funds using the GUI buttons
+5. Restart the application if GUI becomes unresponsive
+6. Check if the fund you selected is available in the dropdown list
 
 ## 📝 License
 
