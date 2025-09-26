@@ -56,6 +56,8 @@ A comprehensive Python tool for extracting and analyzing unit trust fund data fr
 - **Data Export**: Saves raw data in CSV format for external analysis
 - **Safe Data Handling**: Preserves existing data while updating with new information
 - **Bulk File Creation**: Init mode creates individual CSV files for all funds
+- **Automatic PNG Generation**: PNG visualizations are automatically created/updated when CSV files change
+- **Standalone PNG Updater**: Dedicated script for managing PNG files independently
 
 ### 🌐 **API Integration**
 - **Automatic Fund Discovery**: Discovers all available CAL funds from API
@@ -90,6 +92,43 @@ python cal_fund_extractor.py
 ```
 
 The application will open with a modern GUI interface - no command-line input required!
+
+### 🖼️ **PNG Auto-Update System**
+
+The system now automatically generates and updates PNG visualizations whenever CSV data changes:
+
+#### **Automatic PNG Generation**
+- **Built-in**: PNG files are automatically created when CSV files are updated
+- **Real-time**: PNGs update immediately when new data is collected
+- **High-quality**: 300 DPI PNG files suitable for presentations and reports
+
+#### **Standalone PNG Updater**
+Use the dedicated PNG updater for advanced PNG management:
+
+```bash
+# Update all PNG files
+python png_updater.py --all
+
+# Check status of CSV and PNG files
+python png_updater.py --status
+
+# Update specific file
+python png_updater.py --file cal_fund_data_Fund_Name.csv
+
+# Monitor for changes and auto-update
+python png_updater.py --monitor
+```
+
+#### **Easy Scripts**
+- **Windows**: `png_updater.bat [command]`
+- **Unix/Linux/Mac**: `./png_updater.sh [command]`
+
+#### **File Monitoring**
+The system can monitor CSV files and automatically update PNGs when changes are detected:
+```bash
+python png_updater.py --monitor
+```
+This runs continuously and updates PNGs whenever CSV files are modified.
 
 ### 🖥️ **GUI Workflow**
 
@@ -254,6 +293,17 @@ The init command creates individual CSV files for ALL available funds:
 | File Pattern | Description |
 |--------------|-------------|
 | `cal_fund_data_[Fund_Name].csv` | Raw fund price data for each fund (one file per fund) |
+| `cal_fund_price_trend_[Fund_Name].png` | High-resolution graph visualization for each fund |
+
+### PNG Updater Output
+The PNG updater generates/updates visualization files:
+
+| File Pattern | Description |
+|--------------|-------------|
+| `cal_fund_price_trend_[Fund_Name].png` | High-resolution (300 DPI) graph visualization |
+| `png_updater.py` | Standalone PNG management script |
+| `png_updater.bat` | Windows batch script for easy access |
+| `png_updater.sh` | Unix/Linux/Mac shell script for easy access |
 
 ### Example Output Files
 For "Capital Alliance Quantitative Equity Fund":
