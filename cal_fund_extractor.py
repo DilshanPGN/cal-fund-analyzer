@@ -265,6 +265,14 @@ class CALFundExtractor:
         self.root.geometry("1400x900")
         self.root.configure(bg='#f0f0f0')
         
+        # Add proper close handling
+        self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
+        
+        # Add keyboard shortcuts
+        self.root.bind('<Control-q>', lambda e: self._on_closing())
+        self.root.bind('<Escape>', lambda e: self._on_closing())
+        self.root.focus_set()  # Make sure window can receive keyboard events
+        
         # Store data for analysis
         self.df = df
         self.price_data = price_data
@@ -311,6 +319,9 @@ class CALFundExtractor:
         
         # Add help section
         self._create_help_section(left_panel)
+        
+        # Add close button section
+        self._create_close_section(left_panel)
         
         # Create matplotlib graph
         self._create_matplotlib_graph(right_panel)
@@ -391,6 +402,11 @@ Analysis Features:
 • Use date controls to filter the graph
 • All analysis results open in popup windows
 
+Closing Application:
+• Click 'Close Application' button
+• Press Ctrl+Q or Escape key
+• Use the X button on window
+
 Tips:
 • Zoom into interesting periods first
 • Use 'Analyze Current View' for zoomed areas
@@ -399,6 +415,46 @@ Tips:
         help_label = ttk.Label(help_frame, text=help_text, 
                               font=('Arial', 9), justify=tk.LEFT, wraplength=280)
         help_label.pack(fill=tk.BOTH, expand=True)
+    
+    def _create_close_section(self, parent):
+        """Create close button section"""
+        # Close section frame
+        close_frame = ttk.LabelFrame(parent, text="Close Application", padding="10")
+        close_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # Large close button
+        close_btn = ttk.Button(close_frame, text="🚪 Close Application", 
+                              command=self._on_closing, width=25)
+        close_btn.pack(pady=5)
+        
+        # Keyboard shortcuts info
+        shortcuts_text = """Keyboard Shortcuts:
+• Ctrl+Q: Close application
+• Escape: Close application
+• X button: Close application"""
+        
+        shortcuts_label = ttk.Label(close_frame, text=shortcuts_text, 
+                                   font=('Arial', 9), justify=tk.LEFT)
+        shortcuts_label.pack(pady=(5, 0))
+    
+    def _on_closing(self):
+        """Handle application closing with proper cleanup"""
+        try:
+            # Close matplotlib figures to free memory
+            if hasattr(self, 'fig'):
+                plt.close(self.fig)
+            
+            # Destroy the root window
+            if hasattr(self, 'root'):
+                self.root.destroy()
+            
+            print("\n✅ Application closed successfully!")
+            
+        except Exception as e:
+            print(f"Error during closing: {e}")
+            # Force exit if there's an issue
+            import sys
+            sys.exit(0)
     
     def _create_matplotlib_graph(self, parent):
         """Create embedded matplotlib graph"""
