@@ -1,0 +1,238 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+      - production
+      - deployment
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  BACKEND_URL: ${{ secrets.BACKEND_URL }} # e.g., https://cal-fund-analyzer.onrender.com
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  # ============================================================
+  # JOB 1: Deploy Backend to Render
+  # ============================================================
+  deploy-backend:
+    name: 🚀 Deploy Backend to Render
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Trigger Render Deployment
+        run: |
+          echo "🚀 Triggering Render deployment..."
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          echo "✅ Deployment triggered successfully"
+
+      - name: ⏳ Wait for deployment to start
+        run: sleep 30
+
+      - name: 🔍 Wait for backend to be ready (max 5 minutes)
+        run: |
+          echo "⏳ Waiting for backend to be ready..."
+          max_attempts=30
+          attempt=0
+          
+          while [ $attempt -lt $max_attempts ]; do
+            attempt=$((attempt + 1))
+            echo "📡 Attempt $attempt/$max_attempts - Checking backend health..."
+            
+            # Try to fetch version endpoint
+            response=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.BACKEND_URL }}/api/version" || echo "000")
+            
+            if [ "$response" = "200" ]; then
+              echo "✅ Backend is ready! (HTTP $response)"
+              exit 0
+            else
+              echo "⏳ Backend not ready yet (HTTP $response). Waiting 10 seconds..."
+              sleep 10
+            fi
+          done
+          
+          echo "❌ Backend deployment timeout - failed to respond after 5 minutes"
+          exit 1
+
+      - name: 🧪 Verify backend version
+        id: verify-backend
+        run: |
+          echo "🔍 Fetching backend version information..."
+          
+          response=$(curl -s "${{ secrets.BACKEND_URL }}/api/version")
+          echo "📋 Backend Response:"
+          echo "$response" | jq '.'
+          
+          # Extract version
+          version=$(echo "$response" | jq -r '.version')
+          commit=$(echo "$response" | jq -r '.commit // "unknown"')
+          
+          echo "✅ Backend Version: $version"
+          echo "📝 Commit: $commit"
+          
+          # Set outputs for next job
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "commit=$commit" >> $GITHUB_OUTPUT
+
+      - name: 📊 Backend Deployment Summary
+        run: |
+          echo "### 🎉 Backend Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌐 **URL**: ${{ secrets.BACKEND_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 **Version**: ${{ steps.verify-backend.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 📝 **Commit**: ${{ steps.verify-backend.outputs.commit }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Status**: Healthy" >> $GITHUB_STEP_SUMMARY
+
+    outputs:
+      backend-version: ${{ steps.verify-backend.outputs.version }}
+      backend-commit: ${{ steps.verify-backend.outputs.commit }}
+
+  # ============================================================
+  # JOB 2: Deploy Frontend to GitHub Pages
+  # ============================================================
+  deploy-frontend:
+    name: 📄 Deploy Frontend to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: deploy-backend # Wait for backend to be ready
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Configure frontend for production
+        run: |
+          echo "🔧 Configuring frontend with backend URL..."
+          cd frontend/assets/js
+          
+          # Create production config with actual backend URL
+          cat > config.production.js << EOF
+          /**
+           * Production Configuration
+           * This file is auto-generated during GitHub Actions deployment
+           * Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+           * Backend: ${{ secrets.BACKEND_URL }}
+           */
+
+          // Override API_BASE_URL for production
+          if (typeof window !== 'undefined' && typeof CONFIG !== 'undefined') {
+              CONFIG.API_BASE_URL = '${{ secrets.BACKEND_URL }}/api/funds';
+              console.log('✅ Production config loaded. Backend URL:', CONFIG.API_BASE_URL);
+          }
+          EOF
+          
+          echo "✅ Production config created"
+          cat config.production.js
+
+      - name: 📦 Prepare frontend files
+        run: |
+          echo "📦 Preparing frontend files for deployment..."
+          
+          # Create deployment directory
+          mkdir -p deploy
+          
+          # Copy frontend files
+          cp -r frontend/* deploy/
+          
+          # Create .nojekyll to prevent Jekyll processing
+          touch deploy/.nojekyll
+          
+          # Create CNAME if custom domain is set
+          if [ -n "${{ secrets.CUSTOM_DOMAIN }}" ]; then
+            echo "${{ secrets.CUSTOM_DOMAIN }}" > deploy/CNAME
+            echo "✅ Custom domain configured: ${{ secrets.CUSTOM_DOMAIN }}"
+          fi
+          
+          echo "✅ Frontend files prepared"
+
+      - name: 📊 Deployment Info
+        run: |
+          echo "📋 Deployment Information:"
+          echo "- Backend URL: ${{ secrets.BACKEND_URL }}"
+          echo "- Backend Version: ${{ needs.deploy-backend.outputs.backend-version }}"
+          echo "- Frontend Commit: ${{ github.sha }}"
+          echo "- Deploying from: ${{ github.ref }}"
+
+      - name: 📤 Upload artifact for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './deploy'
+
+      - name: 🚀 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: 🎉 Frontend Deployment Summary
+        run: |
+          echo "### 🎉 Frontend Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌐 **URL**: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 **Backend Version**: ${{ needs.deploy-backend.outputs.backend-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 📝 **Frontend Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔗 **Backend**: ${{ secrets.BACKEND_URL }}" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================
+  # JOB 3: Verify Full Stack
+  # ============================================================
+  verify-deployment:
+    name: ✅ Verify Full Stack
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+    
+    steps:
+      - name: 🧪 Test backend API
+        run: |
+          echo "🧪 Testing backend endpoints..."
+          
+          # Test version endpoint
+          echo "📡 Testing /api/version..."
+          version_response=$(curl -s "${{ secrets.BACKEND_URL }}/api/version")
+          echo "$version_response" | jq '.'
+          
+          # Test health endpoint
+          echo "📡 Testing /api/health..."
+          health_response=$(curl -s "${{ secrets.BACKEND_URL }}/api/health")
+          echo "$health_response" | jq '.'
+          
+          # Test funds endpoint
+          echo "📡 Testing /api/funds..."
+          funds_response=$(curl -s "${{ secrets.BACKEND_URL }}/api/funds?valuedate=2024-01-01")
+          
+          # Check if response is valid JSON
+          if echo "$funds_response" | jq empty 2>/dev/null; then
+            echo "✅ Funds endpoint working"
+            echo "$funds_response" | jq '. | length' | xargs echo "Found funds:"
+          else
+            echo "❌ Funds endpoint returned invalid JSON"
+            exit 1
+          fi
+
+      - name: 🎉 Deployment Complete Summary
+        run: |
+          echo "# 🎉 Full Stack Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Backend (Render.com)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌐 URL: ${{ secrets.BACKEND_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 Version: ${{ needs.deploy-backend.outputs.backend-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Status: Healthy" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Frontend (GitHub Pages)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌐 URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" >> $GITHUB_STEP_SUMMARY
+          echo "- 📝 Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Status: Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Your app is now live!" >> $GITHUB_STEP_SUMMARY
+

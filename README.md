@@ -6,18 +6,28 @@ A professional full-stack web application for tracking and analyzing Capital All
 
 ## 🚀 Quick Start
 
-### Windows
+### **Option 1: Run Locally**
+
+#### Windows
 ```bash
 scripts\start.bat
 ```
 
-### Mac/Linux
+#### Mac/Linux
 ```bash
 chmod +x scripts/start.sh
 ./scripts/start.sh
 ```
 
 Then open your browser to: **http://localhost:5000**
+
+### **Option 2: Deploy Online (Automated)**
+
+Merge a PR to `main` branch and GitHub Actions will automatically deploy:
+- **Backend** → Render.com
+- **Frontend** → GitHub Pages
+
+See [GitHub Actions Setup Guide](docs/GITHUB_ACTIONS_SETUP.md) for details.
 
 ---
 
@@ -190,20 +200,56 @@ Click **"Export to CSV"** to download the current fund's data for use in Excel, 
 
 ## 🌐 Deployment
 
-### GitHub Pages (Frontend Only)
+### **Automated Deployment with GitHub Actions** (Recommended) 🤖
 
-> **Note:** GitHub Pages is static hosting, so the Python backend won't work. You'll need to deploy the backend separately (e.g., Heroku, Render, PythonAnywhere).
+The project includes automated deployment via GitHub Actions:
 
-1. Build static assets
-2. Push to GitHub
-3. Enable GitHub Pages in settings
-4. Update `config.js` to point to your deployed backend
+**What happens automatically:**
+1. 🚀 Deploy backend to Render.com
+2. ✅ Verify backend is healthy (`/api/version`)
+3. 📄 Deploy frontend to GitHub Pages
+4. 🧪 Test all endpoints
 
-See `docs/DEPLOYMENT.md` for detailed instructions.
+**Setup required:** (~10 minutes)
+1. Deploy backend to Render.com once (manual)
+2. Get Render deploy hook URL
+3. Add GitHub Secrets (`BACKEND_URL`, `RENDER_DEPLOY_HOOK_URL`)
+4. Enable GitHub Pages
 
-### Full-Stack Deployment
+**After setup:**
+- Merge PR → Automatic deployment ✨
+- No manual steps needed
+- Full verification included
 
-**Backend Options:**
+📚 **[Complete Setup Guide →](docs/GITHUB_ACTIONS_SETUP.md)**
+
+---
+
+### **Manual Deployment** (Alternative)
+
+#### **Option A: Frontend → GitHub Pages | Backend → Render.com**
+
+1. **Backend (Render.com)**
+   ```bash
+   # Deploy backend to Render
+   # See docs/DEPLOYMENT_GUIDE.md
+   ```
+
+2. **Frontend (GitHub Pages)**
+   ```bash
+   # Run preparation script
+   prepare-github-pages.bat  # Windows
+   # OR
+   ./prepare-github-pages.sh  # Mac/Linux
+   ```
+
+📚 **[Manual Deployment Guide →](docs/DEPLOYMENT_GUIDE.md)**
+
+---
+
+#### **Option B: Single Server Deployment**
+
+**Backend Hosting Options:**
 - Heroku (Free tier available)
 - Render (Free tier available)
 - PythonAnywhere

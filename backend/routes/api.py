@@ -120,6 +120,54 @@ def health_check():
     return jsonify(health_status), status_code
 
 
+@api_bp.route('/version', methods=['GET'])
+def get_version():
+    """
+    GET /api/version
+    
+    Get version information about the backend deployment.
+    
+    Returns:
+        JSON response with version details
+        
+    Status Codes:
+        200: Success
+    """
+    import os
+    import subprocess
+    
+    try:
+        # Try to get git commit hash
+        git_commit = subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            stderr=subprocess.DEVNULL
+        ).decode('utf-8').strip()
+    except:
+        git_commit = os.environ.get('RENDER_GIT_COMMIT', 'unknown')[:7]
+    
+    try:
+        # Try to get git branch
+        git_branch = subprocess.check_output(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            stderr=subprocess.DEVNULL
+        ).decode('utf-8').strip()
+    except:
+        git_branch = os.environ.get('RENDER_GIT_BRANCH', 'unknown')
+    
+    version_info = {
+        'version': '1.0.0',
+        'commit': git_commit,
+        'branch': git_branch,
+        'environment': os.environ.get('FLASK_ENV', 'production'),
+        'python_version': os.sys.version.split()[0],
+        'timestamp': datetime.now().isoformat(),
+        'service': 'CAL Fund Analyzer Backend',
+        'status': 'running'
+    }
+    
+    return jsonify(version_info), 200
+
+
 @api_bp.errorhandler(404)
 def not_found(error):
     """Handle 404 errors."""
