@@ -1197,6 +1197,60 @@ historical context and market events.
         
         df.to_csv(self.csv_filename, index=False)
         print(f"Data saved to '{self.csv_filename}'")
+        
+        # Automatically generate PNG when CSV is updated
+        self.generate_png_from_csv()
+    
+    def generate_png_from_csv(self, csv_filename: str = None):
+        """Generate PNG visualization from CSV file"""
+        if csv_filename is None:
+            csv_filename = self.csv_filename
+        
+        if not os.path.exists(csv_filename):
+            print(f"CSV file not found: {csv_filename}")
+            return
+        
+        try:
+            # Read CSV data
+            df = pd.read_csv(csv_filename)
+            if 'Date' not in df.columns or 'OLD_PRICE' not in df.columns:
+                print(f"Invalid CSV format in {csv_filename}")
+                return
+            
+            df['Date'] = pd.to_datetime(df['Date'])
+            df = df.sort_values('Date')
+            
+            if len(df) == 0:
+                print(f"No data to visualize in {csv_filename}")
+                return
+            
+            # Create the plot
+            plt.figure(figsize=(12, 8))
+            plt.plot(df['Date'], df['OLD_PRICE'], marker='o', linewidth=2, markersize=4, alpha=0.7)
+            
+            # Set up the plot
+            fund_name = self.target_fund_name
+            plt.title(f'{fund_name}\nPrice Trend Analysis', fontsize=14, fontweight='bold')
+            plt.xlabel('Date', fontsize=12)
+            plt.ylabel('Price (LKR)', fontsize=12)
+            plt.grid(True, alpha=0.3)
+            
+            # Format x-axis dates
+            plt.xticks(rotation=45)
+            
+            # Generate PNG filename
+            png_filename = csv_filename.replace('.csv', '.png').replace('cal_fund_data_', 'cal_fund_price_trend_')
+            
+            # Save as high-resolution PNG
+            plt.tight_layout()
+            plt.savefig(png_filename, dpi=300, bbox_inches='tight')
+            plt.close()  # Close the figure to free memory
+            
+            print(f"PNG visualization saved to '{png_filename}'")
+            
+        except Exception as e:
+            print(f"Error generating PNG from {csv_filename}: {e}")
+            plt.close()  # Ensure figure is closed even on error
 
     def init_all_funds_data(self, sample_date: str = None) -> Dict[str, Dict[str, float]]:
         """Initialize data collection for all available funds using smart caching and single API call per date"""
@@ -1302,6 +1356,7 @@ historical context and market events.
         # Save data for each fund (only if there's new data)
         saved_files = []
         updated_files = []
+        png_files_generated = []
         
         for fund_name, price_data in all_funds_data.items():
             if price_data:  # Only save if we have data
@@ -1317,6 +1372,12 @@ historical context and market events.
                 df = df.sort_values('Date')
                 df.to_csv(csv_filename, index=False)
                 
+                # Generate PNG for this fund
+                temp_extractor = CALFundExtractor(fund_name, self.start_date, self.end_date, self.api_delay)
+                temp_extractor.generate_png_from_csv(csv_filename)
+                png_filename = csv_filename.replace('.csv', '.png').replace('cal_fund_data_', 'cal_fund_price_trend_')
+                png_files_generated.append(png_filename)
+                
                 if file_exists:
                     updated_files.append(csv_filename)
                     print(f"  🔄 Updated {len(price_data)} data points for '{fund_name}' in '{csv_filename}'")
@@ -1325,8 +1386,9 @@ historical context and market events.
                     print(f"  ✓ Saved {len(price_data)} data points for '{fund_name}' to '{csv_filename}'")
         
         print(f"\nFile Summary:")
-        print(f"  📁 New files created: {len(saved_files)}")
-        print(f"  🔄 Existing files updated: {len(updated_files)}")
+        print(f"  📁 New CSV files created: {len(saved_files)}")
+        print(f"  🔄 Existing CSV files updated: {len(updated_files)}")
+        print(f"  🖼️ PNG visualizations generated: {len(png_files_generated)}")
         
         return all_funds_data
     
