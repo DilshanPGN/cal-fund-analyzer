@@ -16,14 +16,20 @@ class Config:
     
     # Server settings
     HOST = '0.0.0.0'
-    PORT = 5000
+    PORT = int(os.environ.get('PORT', 5000))  # Use environment PORT for deployment
     
     # API settings
     CAL_API_BASE_URL = 'https://cal.lk/wp-admin/admin-ajax.php'
     API_TIMEOUT = 10  # seconds
     
-    # CORS settings
-    CORS_ORIGINS = ['http://localhost:5000', 'http://127.0.0.1:5000']
+    # CORS settings - Allow GitHub Pages and local development
+    CORS_ORIGINS = [
+        'http://localhost:5000',
+        'http://127.0.0.1:5000',
+        'http://localhost:8000',
+        'https://*.github.io',  # Allow any GitHub Pages subdomain
+        '*'  # Allow all origins (for production flexibility)
+    ]
     
     # Rate limiting
     REQUEST_DELAY = 0.5  # seconds between requests
