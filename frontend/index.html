@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAL Fund Analyzer - Web Edition</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/loading-styles.css">
+    <link rel="stylesheet" href="assets/css/confirm-modal.css">
+    <link rel="stylesheet" href="assets/css/analysis-modal.css">
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <!-- Application Modules -->
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/services/api-service.js"></script>
+    <script src="assets/js/services/storage-service.js"></script>
+    <script src="assets/js/components/chart-component.js"></script>
+    <script src="assets/js/components/modal-component.js"></script>
+    <script src="assets/js/components/ui-components.js"></script>
+    <script src="assets/js/utils/date-utils.js"></script>
+    <script src="assets/js/utils/analysis-utils.js"></script>
+    <script src="assets/js/utils/helpers.js"></script>
+    <script src="assets/js/app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Warning Banner for file:// protocol -->
+        <div id="corsWarning" style="display: none; background: #fef3c7; border: 2px solid #f59e0b; padding: 15px; margin: 10px; border-radius: 8px; text-align: center;">
+            <strong>⚠️ Performance Warning</strong><br>
+            You're opening this from a file. For best experience, use a local server:<br>
+            <code style="background: #1f2937; color: #10b981; padding: 5px 10px; border-radius: 3px; margin: 5px;">python -m http.server 8000</code><br>
+            <small>Then open: <a href="http://localhost:8000" style="color: #3b82f6;">http://localhost:8000</a> | 
+            <a href="RUN_LOCALLY.html" style="color: #3b82f6;">Full Instructions</a></small>
+        </div>
+        
+        <!-- Header -->
+        <header class="header">
+            <h1>📊 CAL Fund Analyzer</h1>
+            <p class="subtitle">Track and analyze Capital Alliance fund performance</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Control Panel -->
+            <aside class="control-panel">
+                <div class="panel-section">
+                    <h2>🎯 Fund Selection</h2>
+                    <div class="form-group">
+                        <label for="fundSelect">Select Fund:</label>
+                        <select id="fundSelect" class="form-control">
+                            <option value="">Loading funds...</option>
+                        </select>
+                    </div>
+                    <div class="fund-info" id="fundInfo">
+                        <p class="info-item"><strong>Earliest Date:</strong> <span id="earliestDate">-</span></p>
+                        <p class="info-item"><strong>Data Points:</strong> <span id="dataPoints">-</span></p>
+                        <p class="info-item"><strong>Last Updated:</strong> <span id="lastUpdated">-</span></p>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h2>📅 Date Range</h2>
+                    <div class="form-group">
+                        <label for="startDate">Start Date:</label>
+                        <input type="date" id="startDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">End Date:</label>
+                        <input type="date" id="endDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="dataInterval">Data Interval:</label>
+                        <select id="dataInterval" class="form-control">
+                            <option value="1">Every Day (Most Data)</option>
+                            <option value="7">Every Week</option>
+                            <option value="15" selected>Every 15 Days (Default)</option>
+                            <option value="30">Every Month</option>
+                            <option value="90">Every Quarter</option>
+                        </select>
+                        <small style="color: #6b7280; font-size: 0.85rem; display: block; margin-top: 0.25rem;">
+                            📊 Smaller intervals = more data points & slower fetch
+                        </small>
+                    </div>
+                    <button id="updateGraphBtn" class="btn btn-primary">
+                        <span class="btn-icon">📈</span> Update Graph
+                    </button>
+                </div>
+
+                <div class="panel-section">
+                    <h2>🔄 Data Management</h2>
+                    <button id="fetchDataBtn" class="btn btn-success">
+                        <span class="btn-icon">⬇️</span> Fetch New Data
+                    </button>
+                    <button id="refreshDataBtn" class="btn btn-secondary">
+                        <span class="btn-icon">🔄</span> Refresh Current Fund
+                    </button>
+                    <button id="clearCacheBtn" class="btn btn-danger">
+                        <span class="btn-icon">🗑️</span> Clear Cache
+                    </button>
+                    <div class="storage-info" id="storageInfo">
+                        <p class="info-item">💾 <span id="storageUsed">0 KB</span> used</p>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h2>📊 Analysis</h2>
+                    <button id="analyzeCurrentBtn" class="btn btn-info">
+                        <span class="btn-icon">🔍</span> Analyze Current View
+                    </button>
+                    <button id="analyzeCrisisBtn" class="btn btn-warning">
+                        <span class="btn-icon">🚨</span> Crisis Period (2022)
+                    </button>
+                    <button id="analyzeRecoveryBtn" class="btn btn-success">
+                        <span class="btn-icon">📈</span> Recovery (2023)
+                    </button>
+                    <button id="analyzeRecentBtn" class="btn btn-info">
+                        <span class="btn-icon">📊</span> Recent 6 Months
+                    </button>
+                </div>
+
+                <div class="panel-section">
+                    <h2>💾 Export</h2>
+                    <button id="exportDataBtn" class="btn btn-secondary">
+                        <span class="btn-icon">📄</span> Export as CSV
+                    </button>
+                    <button id="exportPngBtn" class="btn btn-secondary">
+                        <span class="btn-icon">🖼️</span> Export Chart as PNG
+                    </button>
+                </div>
+
+                <div class="panel-section">
+                    <h2>ℹ️ Help</h2>
+                    <div class="help-text">
+                        <p><strong>Getting Started:</strong></p>
+                        <ul>
+                            <li>Select a fund from the dropdown</li>
+                            <li>Click "Fetch New Data" to load prices</li>
+                            <li>Data is cached in your browser</li>
+                            <li>Use analysis buttons for insights</li>
+                        </ul>
+                        <p><strong>Features:</strong></p>
+                        <ul>
+                            <li>All data stored locally</li>
+                            <li>Works offline after first load</li>
+                            <li>Interactive chart with zoom</li>
+                            <li>Export to CSV</li>
+                        </ul>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Graph Area -->
+            <main class="graph-area">
+                <div class="graph-header">
+                    <h2 id="graphTitle">Fund Price Trend</h2>
+                    <div class="graph-stats" id="graphStats">
+                        <span class="stat-item">Min: <strong id="minPrice">-</strong></span>
+                        <span class="stat-item">Max: <strong id="maxPrice">-</strong></span>
+                        <span class="stat-item">Avg: <strong id="avgPrice">-</strong></span>
+                        <span class="stat-item">Return: <strong id="totalReturn">-</strong></span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="spinner"></div>
+                    <p id="loadingText">Loading...</p>
+                </div>
+            </main>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar" id="statusBar">
+            <span id="statusText">Ready</span>
+        </div>
+    </div>
+
+    <!-- Analysis Modal -->
+    <div id="analysisModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Analysis Results</h2>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Analysis content will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal confirm-modal">
+        <div class="modal-content confirm-modal-content">
+            <div class="modal-header confirm-modal-header">
+                <span class="confirm-icon" id="confirmIcon">❓</span>
+                <h2 id="confirmTitle">Confirm Action</h2>
+            </div>
+            <div class="modal-body confirm-modal-body" id="confirmMessage">
+                Are you sure you want to proceed?
+            </div>
+            <div class="modal-footer confirm-modal-footer">
+                <button class="btn btn-secondary" id="confirmCancelBtn">
+                    <span class="btn-icon">✖️</span> Cancel
+                </button>
+                <button class="btn btn-primary" id="confirmOkBtn">
+                    <span class="btn-icon">✓</span> Yes, Continue
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

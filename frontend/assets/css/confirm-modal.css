@@ -1,0 +1,94 @@
+
+/* Confirmation Modal Styles */
+.confirm-modal {
+    z-index: 10001;
+}
+
+.confirm-modal-content {
+    max-width: 500px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.confirm-modal-header {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.confirm-modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.confirm-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.confirm-modal-body {
+    padding: 2rem;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: #1f2937;
+    background: white;
+}
+
+.confirm-modal-body strong {
+    color: #3b82f6;
+    display: block;
+    margin-top: 1rem;
+}
+
+.confirm-modal-footer {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: #f9fafb;
+    border-radius: 0 0 8px 8px;
+    justify-content: flex-end;
+}
+
+.confirm-modal-footer .btn {
+    min-width: 130px;
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+}
+
+.confirm-modal-footer .btn-secondary {
+    background: #6b7280;
+}
+
+.confirm-modal-footer .btn-secondary:hover {
+    background: #4b5563;
+}
+
+.confirm-modal-footer .btn-primary {
+    background: #3b82f6;
+}
+
+.confirm-modal-footer .btn-primary:hover {
+    background: #2563eb;
+}
+
+/* Modal overlay for confirmation */
+.confirm-modal.show {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+

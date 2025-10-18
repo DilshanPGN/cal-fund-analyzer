@@ -1,0 +1,128 @@
+
+/* Analysis Modal Styles */
+.analysis-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.analysis-section:last-of-type {
+    border-bottom: none;
+}
+
+.analysis-section h3 {
+    color: #3b82f6;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.analysis-section p {
+    margin-bottom: 0.5rem;
+    line-height: 1.8;
+}
+
+.analysis-section strong {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+/* Return values styling */
+.positive-return {
+    color: #10b981;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.negative-return {
+    color: #ef4444;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+/* Events list */
+.events-list {
+    list-style: none;
+    padding: 0;
+}
+
+.event-item {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-left: 4px solid;
+    background: #f9fafb;
+    border-radius: 4px;
+}
+
+.event-high {
+    border-left-color: #ef4444;
+    background: #fef2f2;
+}
+
+.event-medium {
+    border-left-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.event-low {
+    border-left-color: #10b981;
+    background: #f0fdf4;
+}
+
+.impact-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+    text-transform: uppercase;
+}
+
+.impact-high {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.impact-medium {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.impact-low {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+/* Insights section */
+.insights-section {
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid #3b82f6;
+}
+
+.insights-list {
+    list-style: none;
+    padding: 0;
+}
+
+.insights-list li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e0f2fe;
+    line-height: 1.6;
+}
+
+.insights-list li:last-child {
+    border-bottom: none;
+}
+
+/* Analysis footer */
+.analysis-footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 2px solid #e5e7eb;
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+}
+
